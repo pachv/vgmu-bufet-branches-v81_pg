@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Операторская панель</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+:root{
+    --bg:#eef2f7;
+    --panel:#ffffff;
+    --ink:#111827;
+    --muted:#6b7280;
+    --green:#16a34a;
+    --blue:#2563eb;
+    --orange:#f59e0b;
+    --red:#dc2626;
+    --line:#e5e7eb;
+    --shadow:0 18px 44px rgba(17,24,39,.12);
+}
+*{box-sizing:border-box}
+body{
+    margin:0;
+    font-family:Segoe UI,system-ui,sans-serif;
+    background:radial-gradient(circle at 8% 0%,rgba(37,99,235,.13),transparent 28%),var(--bg);
+    color:var(--ink);
+}
+.header{
+    background:linear-gradient(135deg,#0f172a,#14532d);
+    color:white;
+    padding:20px;
+    box-shadow:0 12px 40px rgba(15,23,42,.22);
+}
+.header-inner{
+    max-width:1600px;
+    margin:auto;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+}
+.brand h1{margin:0;font-size:34px}
+.brand p{margin:4px 0 0;color:rgba(255,255,255,.82)}
+.header-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button{
+    border:0;
+    border-radius:16px;
+    padding:12px 16px;
+    background:#14532d;
+    color:white;
+    font-weight:900;
+    cursor:pointer;
+    font-size:15px;
+}
+button:hover{filter:brightness(1.07)}
+.logout,.danger{background:var(--red)}
+.sound-note{font-size:13px;opacity:.85;max-width:360px}
+.stats{
+    max-width:1600px;
+    margin:18px auto 0;
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+}
+.stat{
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.18);
+    border-radius:20px;
+    padding:14px;
+}
+.stat b{font-size:28px;display:block}
+.container{max-width:1600px;margin:22px auto;padding:0 18px}
+.board{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:18px;
+    align-items:start;
+}
+.column{
+    background:rgba(255,255,255,.85);
+    border:1px solid white;
+    border-radius:30px;
+    padding:16px;
+    min-height:70vh;
+    box-shadow:var(--shadow);
+}
+.column-title{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    margin-bottom:14px;
+}
+.column-title h2{margin:0;font-size:25px}
+.badge{
+    background:#eef2ff;
+    color:#4338ca;
+    padding:6px 10px;
+    border-radius:999px;
+    font-weight:950;
+}
+.order-card{
+    background:white;
+    border:1px solid var(--line);
+    border-radius:24px;
+    padding:16px;
+    margin-bottom:14px;
+    box-shadow:0 10px 28px rgba(17,24,39,.09);
+    border-left:8px solid var(--orange);
+}
+.order-card.cooking{border-left-color:var(--blue)}
+.order-card.ready{border-left-color:var(--green)}
+.order-head{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    align-items:flex-start;
+}
+.order-id{font-size:28px;font-weight:950}
+.time-chip{
+    background:#f3f4f6;
+    color:#374151;
+    padding:5px 9px;
+    border-radius:12px;
+    font-size:13px;
+    font-weight:800;
+}
+.client{color:#374151;margin:8px 0}
+.pickup{
+    background:#eff6ff;
+    color:#1d4ed8;
+    border:1px solid #bfdbfe;
+    border-radius:16px;
+    padding:10px;
+    font-weight:950;
+    margin:10px 0;
+}
+.items{
+    background:#f8fafc;
+    border:1px solid #edf2f7;
+    border-radius:16px;
+    padding:12px;
+    margin:10px 0;
+    line-height:1.5;
+}
+.total{font-size:20px;font-weight:950}
+.action-primary{width:100%;margin-top:10px}
+.new-btn{background:var(--blue)}
+.cooking-btn{background:var(--green)}
+.ready-btn{background:#111827}
+.modal{display:none;position:fixed;inset:0;background:#0009;z-index:999;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:white;border-radius:28px;padding:22px;width:min(720px,96vw);max-height:92vh;overflow:auto}
+#video{width:100%;border-radius:18px;background:#111;display:none}
+.found{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:18px;padding:14px;margin-top:12px}
+.empty{text-align:center;color:var(--muted);padding:34px 10px}
+.payment-chip{display:inline-block;margin-top:8px;padding:6px 10px;border-radius:999px;font-size:13px;font-weight:900;background:#f1f5f9;color:#334155}
+.payment-chip.paid{background:#dcfce7;color:#166534}.payment-chip.pending{background:#fef3c7;color:#92400e}.payment-chip.refund{background:#fee2e2;color:#991b1b}
+.urgency{margin-top:8px;padding:8px 10px;border-radius:14px;background:#f8fafc;color:#475569;font-weight:800}.urgency.soon{background:#fff7ed;color:#c2410c}.urgency.late{background:#fee2e2;color:#b91c1c}
+.order-card.urgent{box-shadow:0 0 0 3px rgba(245,158,11,.25),0 10px 28px rgba(17,24,39,.09)}
+.order-card.late{box-shadow:0 0 0 3px rgba(220,38,38,.25),0 10px 28px rgba(17,24,39,.09)}
+.items b{color:#111827}
+@media(max-width:1100px){
+    .board{grid-template-columns:1fr}
+    .column{min-height:auto}
+    .stats{grid-template-columns:repeat(2,1fr);padding:0 16px}
+    .header-inner{display:block}
+    .header-actions{margin-top:12px}
+}
+@media(max-width:650px){
+    .brand h1{font-size:27px}
+    .stats{grid-template-columns:1fr}
+    .container{padding:0 10px}
+    .column{border-radius:22px;padding:12px}
+    .order-card{border-radius:20px}
+}
+
+/* V77_OPERATOR_WORKSTATION */
+.preorder-strip{margin-bottom:18px;background:#fff;border:1px solid var(--line);border-radius:24px;padding:14px;box-shadow:var(--shadow)}
+.preorder-list{display:flex;gap:10px;overflow:auto;padding-bottom:3px}
+.preorder-chip{min-width:220px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:10px;color:#1e3a8a}
+.preorder-chip b{display:block;font-size:18px}
+.stock-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.stock-item{border:1px solid var(--line);border-radius:18px;padding:12px;background:#f8fafc}
+.stock-item .stock-count{font-size:22px;font-weight:950;margin:8px 0}
+.stock-item button{width:100%;background:#dc2626}
+.now-tag{display:inline-block;background:#dcfce7;color:#166534;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900;margin-top:8px}
+@media(max-width:650px){
+    .stock-grid{grid-template-columns:1fr}
+    .preorder-chip{min-width:190px}
+    .header-actions button{flex:1 1 150px}
+}
+
+
+/* V81: планшетный режим смены и надёжные оповещения */
+.alert-status{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:9px 12px;
+    border-radius:999px;
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.18);
+    font-size:13px;
+    font-weight:900;
+}
+.alert-status.ok{background:rgba(22,163,74,.28);border-color:rgba(134,239,172,.45)}
+.alert-status.warn{background:rgba(245,158,11,.26);border-color:rgba(253,230,138,.45)}
+.shift-arm{
+    position:fixed;
+    inset:0;
+    z-index:5000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(2,6,23,.92);
+    backdrop-filter:blur(10px);
+}
+.shift-arm.hidden{display:none}
+.shift-arm-card{
+    width:min(560px,96vw);
+    background:white;
+    color:#0f172a;
+    border-radius:30px;
+    padding:28px;
+    box-shadow:0 34px 100px rgba(0,0,0,.38);
+    text-align:center;
+}
+.shift-arm-icon{font-size:64px;line-height:1}
+.shift-arm-card h2{font-size:30px;margin:12px 0 8px}
+.shift-arm-card p{color:#475569;line-height:1.5}
+.shift-arm-card button{
+    width:100%;
+    margin-top:14px;
+    padding:18px;
+    font-size:19px;
+    background:linear-gradient(135deg,#166534,#16a34a);
+}
+.shift-checks{
+    margin:18px 0 4px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+}
+.shift-check{
+    padding:10px 8px;
+    border-radius:14px;
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    font-size:13px;
+    font-weight:800;
+}
+@media(max-width:650px){
+    .shift-arm{padding:12px}
+    .shift-arm-card{padding:22px 18px;border-radius:26px}
+    .shift-arm-card h2{font-size:26px}
+    .shift-checks{grid-template-columns:1fr}
+    .alert-status{width:100%;justify-content:center}
+}
+
+</style>
+</head>
+<body>
+
+<div id="shiftArm" class="shift-arm">
+    <div class="shift-arm-card">
+        <div class="shift-arm-icon">🔔</div>
+        <h2>Начать смену</h2>
+        <p>Нажмите один раз. Планшет разблокирует звук, вибрацию и уведомления, а экран не будет засыпать во время работы.</p>
+        <div class="shift-checks">
+            <div class="shift-check">🔊 Громкий сигнал</div>
+            <div class="shift-check">📳 Вибрация</div>
+            <div class="shift-check">☀️ Экран не засыпает</div>
+        </div>
+        <button onclick="armOperatorAlerts()">Начать смену и включить оповещения</button>
+        <p style="font-size:12px;margin-bottom:0">На Android/Chrome первое нажатие необходимо из-за правил браузера.</p>
+    </div>
+</div>
+
+<header class="header">
+    <div class="header-inner">
+        <div class="brand">
+            <h1>🧑‍💼 ОПЕРАТОРСКАЯ V2</h1>
+            <p id="me">Загрузка...</p>
+        </div>
+        <div class="header-actions">
+            <button onclick="testKitchenAlert()">🔊 Проверить звук</button>
+            <div id="alertStatus" class="alert-status warn">🟠 Оповещения не активированы</div>
+            <button onclick="openIssueModal()">📷 Выдать по QR / коду</button>
+            <button onclick="openStockModal()">📋 Остатки / стоп-лист</button>
+            <button class="logout" onclick="logout()">Выйти</button>
+            <div class="sound-note">Для планшета используйте «Начать смену»: он включает звук и удерживает экран активным.</div>
+        </div>
+    </div>
+    <div class="stats">
+        <div class="stat">Новые<b id="statNew">0</b></div>
+        <div class="stat">В работе<b id="statCooking">0</b></div>
+        <div class="stat">Готовы<b id="statReady">0</b></div>
+        <div class="stat">Всего активно<b id="statTotal">0</b></div>
+    </div>
+</header>
+
+<div class="container">
+    <div id="preorderStrip" class="preorder-strip" style="display:none">
+        <b>⏰ Ближайшие предзаказы</b>
+        <div id="preorderList" class="preorder-list"></div>
+    </div>
+    <div class="board">
+        <div class="column">
+            <div class="column-title"><h2>🆕 Новые</h2><span id="badgeNew" class="badge">0</span></div>
+            <div id="newOrders"></div>
+        </div>
+        <div class="column">
+            <div class="column-title"><h2>🧾 В работе</h2><span id="badgeCooking" class="badge">0</span></div>
+            <div id="cookingOrders"></div>
+        </div>
+        <div class="column">
+            <div class="column-title"><h2>📦 Готовы к выдаче</h2><span id="badgeReady" class="badge">0</span></div>
+            <div id="readyOrders"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="issueModal">
+    <div class="modal-box">
+        <h2>📷 Выдать заказ</h2>
+        <p>Отсканируйте QR-код клиента или введите код вручную.</p>
+        <video id="video" autoplay playsinline></video>
+        <canvas id="qrCanvas" style="display:none"></canvas>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+            <button onclick="startScanner()">Начать сканирование</button>
+            <button class="danger" onclick="stopScanner()">Остановить камеру</button>
+        </div>
+        <input id="manualCode" placeholder="Введите код" style="width:100%;padding:14px;border-radius:14px;border:1px solid #ddd;margin-top:12px">
+        <button onclick="findByCode()">Найти заказ</button>
+        <div id="foundOrder"></div>
+        <button class="danger" onclick="closeIssueModal()">Закрыть</button>
+    </div>
+</div>
+
+
+<div class="modal" id="stockModal">
+    <div class="modal-box">
+        <h2>📋 Остатки моего буфета</h2>
+        <p>Кнопка «Закончился» обнуляет остаток только в вашем буфете. Цены и меню оператор менять не может.</p>
+        <div id="operatorStockGrid" class="stock-grid"></div>
+        <button class="danger" onclick="closeStockModal()" style="margin-top:14px">Закрыть</button>
+    </div>
+</div>
+
+<audio id="kitchenAlarmAudio" src="/static/alarm.wav" preload="auto" playsinline></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+const socket = (typeof io === 'function') ? io() : {on(){}, emit(){}}
+let branchId = null
+let cache = []
+let knownOrderIds = []
+let stream = null
+let scanTimer = null
+let foundCode = null
+
+function esc(value){
+    return String(value ?? '')
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'",'&#039;')
+}
+
+function paymentLabel(order){
+    const st = order.payment_status || 'unpaid'
+    if(st === 'paid') return '<span class="payment-chip paid">✅ Онлайн оплачено</span>'
+    if(st === 'pending') return '<span class="payment-chip pending">⏳ Ждём онлайн-оплату</span>'
+    if(st === 'refunded') return '<span class="payment-chip refund">↩️ Возврат</span>'
+    if(st === 'refund_required') return '<span class="payment-chip refund">⚠️ Проверить возврат</span>'
+    return '<span class="payment-chip">💵 Оплата на кассе</span>'
+}
+
+function parseLocal(value){
+    if(!value) return null
+    const d = new Date(String(value).replace(' ', 'T'))
+    return Number.isNaN(d.getTime()) ? null : d
+}
+
+function urgencyInfo(order){
+    if(!order.pickup_time) return {html:'', cls:''}
+    const pickup = parseLocal(order.pickup_time)
+    if(!pickup) return {html:`<div class="urgency">⏰ Подготовить к: ${esc(order.pickup_time)}</div>`, cls:''}
+    const min = Math.round((pickup - new Date()) / 60000)
+    if(min < 0) return {html:`<div class="urgency late">🔴 Время выдачи прошло на ${Math.abs(min)} мин.</div>`, cls:'late'}
+    if(min <= 10) return {html:`<div class="urgency soon">🟠 До выдачи ${min} мин.</div>`, cls:'urgent'}
+    if(min <= 60) return {html:`<div class="urgency">⏰ До выдачи ${min} мин.</div>`, cls:''}
+    return {html:`<div class="urgency">⏰ Подготовить к: ${esc(order.pickup_time)}</div>`, cls:''}
+}
+
+socket.on('update', () => load())
+
+
+let kitchenAudioCtx = null
+let kitchenAudioUnlocked = false
+let wakeLockSentinel = null
+let operatorSwRegistration = null
+let lastAlertAt = 0
+
+function setAlertStatus(text, ok=false){
+    if(typeof alertStatus === 'undefined' || !alertStatus) return
+    alertStatus.textContent = (ok ? '🟢 ' : '🟠 ') + text
+    alertStatus.classList.toggle('ok', ok)
+    alertStatus.classList.toggle('warn', !ok)
+}
+
+async function registerOperatorServiceWorker(){
+    if(!('serviceWorker' in navigator)) return null
+    try{
+        operatorSwRegistration = await navigator.serviceWorker.register('/static/sw.js', {scope:'/'})
+        return operatorSwRegistration
+    }catch(e){
+        console.warn('service worker', e)
+        return null
+    }
+}
+
+async function requestKitchenWakeLock(){
+    if(!('wakeLock' in navigator)) return false
+    if(document.visibilityState !== 'visible') return false
+
+    try{
+        if(wakeLockSentinel && !wakeLockSentinel.released) return true
+        wakeLockSentinel = await navigator.wakeLock.request('screen')
+        wakeLockSentinel.addEventListener('release', () => {
+            wakeLockSentinel = null
+            if(document.visibilityState === 'visible' && kitchenAudioUnlocked){
+                setTimeout(() => requestKitchenWakeLock().catch(() => {}), 800)
+            }
+        })
+        return true
+    }catch(e){
+        console.warn('wake lock', e)
+        return false
+    }
+}
+
+async function unlockKitchenAudio(){
+    let htmlAudioOk = false
+    let webAudioOk = false
+
+    try{
+        kitchenAlarmAudio.muted = false
+        kitchenAlarmAudio.volume = 1
+        kitchenAlarmAudio.currentTime = 0
+        await kitchenAlarmAudio.play()
+        await new Promise(resolve => setTimeout(resolve, 180))
+        kitchenAlarmAudio.pause()
+        kitchenAlarmAudio.currentTime = 0
+        htmlAudioOk = true
+    }catch(e){
+        console.warn('html audio unlock', e)
+    }
+
+    try{
+        const AudioCtx = window.AudioContext || window.webkitAudioContext
+        if(AudioCtx){
+            if(!kitchenAudioCtx) kitchenAudioCtx = new AudioCtx()
+            if(kitchenAudioCtx.state === 'suspended') await kitchenAudioCtx.resume()
+
+            // Короткий тестовый тон создаётся внутри пользовательского нажатия.
+            const osc = kitchenAudioCtx.createOscillator()
+            const gain = kitchenAudioCtx.createGain()
+            osc.frequency.value = 880
+            gain.gain.setValueAtTime(0.0001, kitchenAudioCtx.currentTime)
+            gain.gain.exponentialRampToValueAtTime(0.12, kitchenAudioCtx.currentTime + 0.01)
+            gain.gain.exponentialRampToValueAtTime(0.0001, kitchenAudioCtx.currentTime + 0.12)
+            osc.connect(gain)
+            gain.connect(kitchenAudioCtx.destination)
+            osc.start()
+            osc.stop(kitchenAudioCtx.currentTime + 0.13)
+            webAudioOk = true
+        }
+    }catch(e){
+        console.warn('web audio unlock', e)
+    }
+
+    kitchenAudioUnlocked = htmlAudioOk || webAudioOk
+    return kitchenAudioUnlocked
+}
+
+async function requestOperatorNotifications(){
+    if(!('Notification' in window)) return 'unsupported'
+    try{
+        if(Notification.permission === 'default'){
+            return await Notification.requestPermission()
+        }
+        return Notification.permission
+    }catch(e){
+        console.warn('notification permission', e)
+        return Notification.permission || 'denied'
+    }
+}
+
+async function armOperatorAlerts(){
+    const audioOk = await unlockKitchenAudio()
+    await registerOperatorServiceWorker()
+    const notificationPermission = await requestOperatorNotifications()
+    const wakeOk = await requestKitchenWakeLock()
+
+    if(audioOk){
+        try{ localStorage.setItem('kitchen_sound_unlocked','1') }catch(e){}
+        shiftArm.classList.add('hidden')
+        setAlertStatus(
+            `Звук включён${wakeOk ? ' · экран активен' : ''}${notificationPermission === 'granted' ? ' · уведомления разрешены' : ''}`,
+            true
+        )
+        // Полноценная проверка: работник сразу слышит тот же сигнал, что будет у заказа.
+        setTimeout(() => playKitchenAlarmOnce(), 220)
+    }else{
+        setAlertStatus('Браузер не дал включить звук — проверьте громкость и разрешение сайта', false)
+        alert('Не удалось разблокировать звук. Проверьте громкость планшета и разрешение Chrome → Настройки сайта → Звук.')
+    }
+}
+
+function webAudioFallbackPattern(){
+    try{
+        if(!kitchenAudioCtx || kitchenAudioCtx.state !== 'running') return
+
+        const now = kitchenAudioCtx.currentTime
+        ;[0, 0.32, 0.64].forEach((delay, idx) => {
+            const osc = kitchenAudioCtx.createOscillator()
+            const gain = kitchenAudioCtx.createGain()
+            osc.type = 'square'
+            osc.frequency.value = idx === 1 ? 740 : 980
+            gain.gain.setValueAtTime(0.0001, now + delay)
+            gain.gain.exponentialRampToValueAtTime(0.22, now + delay + 0.015)
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.23)
+            osc.connect(gain)
+            gain.connect(kitchenAudioCtx.destination)
+            osc.start(now + delay)
+            osc.stop(now + delay + 0.25)
+        })
+    }catch(e){}
+}
+
+function playKitchenAlarmOnce(){
+    let started = false
+    try{
+        kitchenAlarmAudio.pause()
+        kitchenAlarmAudio.currentTime = 0
+        kitchenAlarmAudio.muted = false
+        kitchenAlarmAudio.volume = 1
+        const promise = kitchenAlarmAudio.play()
+        started = true
+        if(promise && promise.catch){
+            promise.catch(() => webAudioFallbackPattern())
+        }
+    }catch(e){
+        webAudioFallbackPattern()
+    }
+
+    if(!started) webAudioFallbackPattern()
+
+    if(navigator.vibrate){
+        try{ navigator.vibrate([600,180,600,180,900]) }catch(e){}
+    }
+}
+
+async function showOperatorNotification(freshOrders){
+    if(!freshOrders || !freshOrders.length) return
+    if(!('Notification' in window) || Notification.permission !== 'granted') return
+
+    const count = freshOrders.length
+    const first = freshOrders[0]
+    const title = count === 1 ? `Новый заказ #${first.id}` : `Новых заказов: ${count}`
+    const body = count === 1
+        ? `${first.name || 'Клиент'} · ${Number(first.total || 0)} ₽`
+        : `Откройте операторскую: ${freshOrders.slice(0,3).map(o => '#' + o.id).join(', ')}`
+
+    try{
+        let registration = operatorSwRegistration
+        if(!registration && 'serviceWorker' in navigator){
+            registration = await navigator.serviceWorker.getRegistration('/')
+        }
+
+        if(registration && registration.showNotification){
+            await registration.showNotification(title, {
+                body,
+                tag:'vgmu-operator-new-order',
+                renotify:true,
+                requireInteraction:true,
+                vibrate:[600,180,600,180,900],
+                icon:'/static/icons/icon-192.png',
+                badge:'/static/icons/icon-192.png',
+                data:{url:'/operator'}
+            })
+        }else{
+            // На настольных браузерах Notification() остаётся запасным вариантом.
+            new Notification(title, {body, tag:'vgmu-operator-new-order', requireInteraction:true})
+        }
+    }catch(e){
+        console.warn('notification show', e)
+    }
+}
+
+function kitchenBeep(freshOrders=[]){
+    if(!kitchenAudioUnlocked){
+        setAlertStatus('Звук не активирован — нажмите «Начать смену»', false)
+        if(typeof shiftArm !== 'undefined') shiftArm.classList.remove('hidden')
+        return
+    }
+
+    const now = Date.now()
+    // Защита от дублирующего Socket.IO + polling события в одну секунду.
+    if(now - lastAlertAt < 1200) return
+    lastAlertAt = now
+
+    playKitchenAlarmOnce()
+    setTimeout(() => playKitchenAlarmOnce(), 1900)
+    setTimeout(() => playKitchenAlarmOnce(), 3800)
+    showOperatorNotification(freshOrders).catch(() => {})
+}
+
+async function testKitchenAlert(){
+    if(!kitchenAudioUnlocked){
+        await armOperatorAlerts()
+        return
+    }
+    playKitchenAlarmOnce()
+    setTimeout(() => playKitchenAlarmOnce(), 1000)
+    await showOperatorNotification([{id:'TEST', name:'Проверка оповещения', total:0}])
+}
+
+document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible' && kitchenAudioUnlocked){
+        if(kitchenAudioCtx && kitchenAudioCtx.state === 'suspended'){
+            kitchenAudioCtx.resume().catch(() => {})
+        }
+        requestKitchenWakeLock().catch(() => {})
+    }
+})
+
+// После системной паузы Android любое следующее касание восстанавливает AudioContext.
+document.addEventListener('pointerdown', () => {
+    if(!kitchenAudioUnlocked) return
+    if(kitchenAudioCtx && kitchenAudioCtx.state === 'suspended'){
+        kitchenAudioCtx.resume().catch(() => {})
+    }
+}, {passive:true})
+
+async function init(){
+    registerOperatorServiceWorker().catch(() => {})
+    const res = await fetch('/api/operator/me')
+    if(!res.ok){ location.href='/operator-login'; return }
+    const operator = await res.json()
+    branchId = operator.branch_id
+    me.innerText = operator.branch_name
+    socket.emit('join_branch',{branch_id:branchId})
+    load()
+}
+
+async function logout(){
+    await fetch('/api/operator/logout',{method:'POST'})
+    location.href='/operator-login'
+}
+
+async function next(id){
+    const res = await fetch('/api/operator/' + id + '/next',{method:'POST'})
+    const data = await res.json()
+    if(data.error) alert(data.error)
+    load()
+}
+
+async function load(){
+    const res = await fetch('/api/operator/orders')
+    const data = await res.json()
+    if(data.error){ location.href='/operator-login'; return }
+
+    const newIds = data.map(order => order.id)
+
+    if(knownOrderIds.length){
+        const freshIds = newIds.filter(id => !knownOrderIds.includes(id))
+        if(freshIds.length){
+            const freshOrders = data.filter(order => freshIds.includes(order.id))
+            kitchenBeep(freshOrders)
+        }
+    }
+
+    knownOrderIds = newIds
+    cache = data
+    render()
+}
+
+function orderCard(order){
+    const cls = order.status === 'cooking' ? 'cooking' : order.status === 'ready' ? 'ready' : ''
+    const urgency = urgencyInfo(order)
+    const pending = (order.payment_status || 'unpaid') === 'pending'
+    const btn = order.status === 'new'
+        ? (pending ? `<button class="action-primary" disabled>Ждём оплату</button>` : `<button class="action-primary new-btn" onclick="next(${order.id})">Принять заказ</button>`)
+        : order.status === 'cooking'
+            ? `<button class="action-primary cooking-btn" onclick="next(${order.id})">Готов к выдаче</button>`
+            : `<button class="action-primary ready-btn" onclick="openIssueModal()">Выдать по QR / коду</button>`
+
+    const created = parseLocal(order.created_at)
+    const createdText = created ? created.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}) : esc(order.created_at || '')
+
+    return `
+        <div class="order-card ${cls} ${urgency.cls}">
+            <div class="order-head">
+                <div class="order-id">#${order.id}</div>
+                <div class="time-chip">${createdText}</div>
+            </div>
+            <div class="client">👤 ${esc(order.name)}<br>📱 ${esc(order.phone)}</div>
+            ${urgency.html}
+            ${order.pickup_time ? '' : '<span class="now-tag">Сейчас</span>'}
+            <div class="items">${(order.items || []).map(i => `<b>${esc(i.name)}</b> × ${Number(i.quantity || 0)}`).join('<br>')}</div>
+            <div class="total">💰 ${Number(order.total || 0)} ₽</div>
+            ${paymentLabel(order)}
+            ${btn}
+        </div>
+    `
+}
+
+async function openStockModal(){
+    stockModal.style.display='flex'
+    operatorStockGrid.innerHTML='<div class="empty">Загрузка...</div>'
+    try{
+        const res=await fetch('/api/operator/menu')
+        const data=await res.json()
+        if(!res.ok || data.error){ operatorStockGrid.innerHTML=`<div class="empty">${esc(data.error || 'Ошибка')}</div>`; return }
+        operatorStockGrid.innerHTML=data.map(item => `
+            <div class="stock-item">
+                <b>${esc(item.name)}</b>
+                <div class="stock-count">${Number(item.raw_quantity ?? item.quantity ?? 0)} шт.</div>
+                <div style="color:var(--muted);font-size:13px">Доступно клиенту: ${Number(item.quantity || 0)}</div>
+                <button ${Number(item.raw_quantity ?? item.quantity ?? 0)<=0?'disabled':''} onclick="markSoldOut(${item.id}, this)">Закончился</button>
+            </div>
+        `).join('') || '<div class="empty">Меню пустое</div>'
+    }catch(e){
+        operatorStockGrid.innerHTML='<div class="empty">Не удалось загрузить остатки</div>'
+    }
+}
+
+function closeStockModal(){
+    stockModal.style.display='none'
+}
+
+async function markSoldOut(menuId, button){
+    if(!confirm('Поставить эту позицию в стоп-лист вашего буфета?')) return
+    button.disabled=true
+    const res=await fetch('/api/operator/menu/'+menuId+'/sold-out',{method:'POST'})
+    const data=await res.json()
+    if(!res.ok || data.error){ alert(data.error || 'Ошибка'); button.disabled=false; return }
+    await openStockModal()
+    await load()
+}
+
+function renderPreorders(){
+    const upcoming=cache
+        .filter(o => o.pickup_time && ['new','cooking','ready'].includes(o.status))
+        .sort((a,b)=>(parseLocal(a.pickup_time)?.getTime()||0)-(parseLocal(b.pickup_time)?.getTime()||0))
+        .slice(0,8)
+    preorderStrip.style.display=upcoming.length?'block':'none'
+    preorderList.innerHTML=upcoming.map(o => {
+        const d=parseLocal(o.pickup_time)
+        const t=d?d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):esc(o.pickup_time)
+        return `<div class="preorder-chip"><b>#${o.id} · ${t}</b><span>${esc(o.name)} · ${esc(o.status==='ready'?'готов':o.status==='cooking'?'в работе':'новый')}</span></div>`
+    }).join('')
+}
+
+function render(){
+    renderPreorders()
+    const groups = {new:[], cooking:[], ready:[]}
+    cache.forEach(o => { if(groups[o.status]) groups[o.status].push(o) })
+    Object.values(groups).forEach(list => list.sort((a,b) => {
+        const at = parseLocal(a.pickup_time)?.getTime() ?? Number.MAX_SAFE_INTEGER
+        const bt = parseLocal(b.pickup_time)?.getTime() ?? Number.MAX_SAFE_INTEGER
+        return at - bt || a.id - b.id
+    }))
+
+    statNew.innerText = groups.new.length
+    statCooking.innerText = groups.cooking.length
+    statReady.innerText = groups.ready.length
+    statTotal.innerText = cache.length
+    badgeNew.innerText = groups.new.length
+    badgeCooking.innerText = groups.cooking.length
+    badgeReady.innerText = groups.ready.length
+
+    newOrders.innerHTML = groups.new.length ? groups.new.map(orderCard).join('') : '<div class="empty">Новых заказов нет</div>'
+    cookingOrders.innerHTML = groups.cooking.length ? groups.cooking.map(orderCard).join('') : '<div class="empty">В работе пусто</div>'
+    readyOrders.innerHTML = groups.ready.length ? groups.ready.map(orderCard).join('') : '<div class="empty">Готовых нет</div>'
+}
+
+function openIssueModal(){
+    issueModal.style.display = 'flex'
+    manualCode.value = ''
+    foundOrder.innerHTML = ''
+    foundCode = null
+}
+
+function closeIssueModal(){
+    stopScanner()
+    issueModal.style.display = 'none'
+}
+
+async function startScanner(){
+    if(typeof jsQR !== 'function'){
+        alert('QR-библиотека не загрузилась. Введите код заказа вручную.')
+        return
+    }
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        alert('Камера недоступна. Введите код вручную.')
+        return
+    }
+
+    try{
+        stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+        video.srcObject = stream
+        video.style.display = 'block'
+
+        const canvas = document.getElementById('qrCanvas')
+        const ctx = canvas.getContext('2d')
+
+        scanTimer = setInterval(() => {
+            if(video.readyState !== video.HAVE_ENOUGH_DATA) return
+            canvas.width = video.videoWidth
+            canvas.height = video.videoHeight
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+            const code = jsQR(imageData.data, imageData.width, imageData.height)
+
+            if(code && code.data){
+                manualCode.value = code.data
+                stopScanner()
+                findByCode()
+            }
+        }, 500)
+    }catch(e){
+        alert('Камера недоступна. Откройте страницу через HTTPS и разрешите камеру.')
+    }
+}
+
+function stopScanner(){
+    if(scanTimer) clearInterval(scanTimer)
+    scanTimer = null
+    if(stream){
+        stream.getTracks().forEach(t => t.stop())
+        stream = null
+    }
+    video.style.display = 'none'
+}
+
+async function findByCode(){
+    const code = manualCode.value.trim()
+    if(!code){ alert('Введите код'); return }
+
+    const res = await fetch('/api/operator/find-code',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({code})
+    })
+    const data = await res.json()
+
+    if(data.error){
+        foundOrder.innerHTML = `<p style="color:#dc2626">${data.error}</p>`
+        return
+    }
+
+    foundCode = code
+    foundOrder.innerHTML = `
+        <div class="found">
+            <h3>Заказ #${data.id}</h3>
+            👤 ${esc(data.name)}<br>
+            📱 ${esc(data.phone)}<br>
+            ${data.pickup_time ? `⏰ ${esc(data.pickup_time)}<br>` : ''}
+            ${paymentLabel(data)}
+            <hr>
+            ${(data.items || []).map(i => `${esc(i.name)} × ${Number(i.quantity || 0)}`).join('<br>')}
+            <h3>${Number(data.total || 0)} ₽</h3>
+            <button onclick="issueFound()">Подтвердить выдачу</button>
+        </div>
+    `
+}
+
+async function issueFound(){
+    if(!foundCode){ alert('Сначала найдите заказ'); return }
+
+    const res = await fetch('/api/operator/issue-code',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({code:foundCode})
+    })
+    const data = await res.json()
+
+    if(data.error){ alert(data.error); return }
+
+    alert('Заказ выдан')
+    closeIssueModal()
+    load()
+}
+
+init()
+setInterval(() => load().catch(() => {}), 7000)
+</script>
+</body>
+</html>

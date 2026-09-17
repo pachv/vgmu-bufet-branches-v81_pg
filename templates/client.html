@@ -1,0 +1,2470 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ВГМУ Буфет</title>
+<meta name="theme-color" content="#0f5132">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+    --green:#167a3c;
+    --green-dark:#0f5132;
+    --orange:#ff9f1c;
+    --red:#dc2626;
+    --blue:#2563eb;
+    --bg:#f4f6f5;
+    --card:#ffffff;
+    --text:#111827;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --shadow:0 12px 34px rgba(17,24,39,.10);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+    font-family:Segoe UI,system-ui,-apple-system,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding-bottom:84px;
+}
+button,input,select{font:inherit}
+button{
+    border:0;
+    border-radius:16px;
+    padding:11px 14px;
+    background:var(--green);
+    color:white;
+    font-weight:800;
+    cursor:pointer;
+}
+button:disabled{background:#9ca3af;cursor:not-allowed}
+input,select{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:12px 14px;
+    background:white;
+    outline:none;
+}
+.app-header{
+    position:sticky;
+    top:0;
+    z-index:50;
+    background:linear-gradient(135deg,var(--green-dark),var(--green));
+    color:white;
+    padding:14px 14px 18px;
+    box-shadow:0 8px 28px rgba(15,81,50,.24);
+}
+.header-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{display:flex;gap:10px;align-items:center;font-weight:950;font-size:20px}
+.logo{width:42px;height:42px;border-radius:15px;background:white;color:var(--green);display:grid;place-items:center;font-size:23px}
+.user-chip{background:rgba(255,255,255,.16);border-radius:18px;padding:8px 10px;font-size:13px;text-align:right}
+.search-box{margin-top:12px;display:flex;gap:8px}
+.search-box input{border:0}
+.screen{display:none;max-width:1200px;margin:0 auto;padding:14px}
+.screen.active{display:block}
+.branch-pills{display:flex;gap:8px;overflow:auto;padding:2px 0 10px}
+.branch-pill{
+    white-space:nowrap;
+    background:white;
+    color:var(--green-dark);
+    border:1px solid #d6eadb;
+    box-shadow:none;
+    border-radius:999px;
+}
+.branch-pill.active{background:var(--green);color:white}
+.category-row{display:flex;gap:8px;overflow:auto;margin-bottom:12px}
+.cat{background:#fff;border:1px solid var(--line);border-radius:999px;color:#374151;box-shadow:none;white-space:nowrap}
+.cat.active{background:#111827;color:white}
+.hero-card{
+    background:linear-gradient(135deg,#fff7ed,#ecfdf5);
+    border:1px solid #fed7aa;
+    border-radius:24px;
+    padding:14px;
+    margin-bottom:14px;
+    box-shadow:var(--shadow);
+}
+.hero-card h2{margin:0 0 8px;font-size:21px}
+.menu-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+}
+.food-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:22px;
+    padding:10px;
+    min-height:286px;
+    display:flex;
+    flex-direction:column;
+    box-shadow:var(--shadow);
+}
+.food-img{
+    height:104px;
+    border-radius:18px;
+    display:grid;
+    place-items:center;
+    background:linear-gradient(135deg,#eff6ff,#ecfdf5);
+    font-size:42px;
+    margin-bottom:8px;
+    overflow:hidden;
+}
+.food-img img{width:100%;height:100%;object-fit:cover}
+.food-card h3{font-size:15px;line-height:1.15;margin:4px 0}
+.food-card p{font-size:12px;color:var(--muted);line-height:1.22;margin:0;min-height:30px;max-height:45px;overflow:hidden}
+.meta-row{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:8px 0;font-size:12px;color:var(--muted)}
+.price{font-size:19px;font-weight:950;margin-top:auto}
+.stock{font-size:12px;font-weight:800;color:var(--green)}
+.stock.zero{color:var(--red)}
+.food-card button{width:100%;margin-top:8px}
+.combo-section{margin-bottom:14px}
+.card{
+    background:white;
+    border:1px solid var(--line);
+    border-radius:22px;
+    padding:14px;
+    margin-bottom:12px;
+    box-shadow:var(--shadow);
+}
+.cart-item{display:flex;gap:12px;align-items:center}
+.cart-ico{width:48px;height:48px;border-radius:16px;background:#f3f4f6;display:grid;place-items:center;font-size:25px}
+.qty-controls{display:flex;gap:8px;align-items:center;margin-top:8px}
+.qty-controls button{padding:6px 11px;border-radius:12px}
+.total-bar{
+    position:sticky;
+    bottom:78px;
+    background:linear-gradient(135deg,var(--green-dark),var(--green));
+    color:white;
+    border-radius:24px;
+    padding:16px;
+    margin-top:14px;
+    box-shadow:0 16px 40px rgba(15,81,50,.22);
+}
+.total-bar h2{margin:0}
+.order-card .status{display:inline-block;border-radius:999px;padding:5px 10px;background:#eef2ff;color:#4338ca;font-size:12px;font-weight:900;margin:6px 0}
+.qr-img{width:150px;height:150px;background:white;border-radius:18px;padding:8px;border:1px solid var(--line)}
+.rating-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:18px;padding:10px;margin-top:10px}
+.rating-box button{background:#fff;color:#f59e0b;border:1px solid #fed7aa;box-shadow:none;margin:2px;padding:7px 9px}
+.order-items-summary{margin:10px 0;padding:10px 12px;background:#f8fafc;border:1px solid var(--line);border-radius:16px;line-height:1.5}.order-progress{display:flex;gap:6px;margin:12px 0}.order-progress span{flex:1;height:7px;border-radius:999px;background:#e5e7eb}.order-progress span.done{background:var(--green)}.order-progress span.current{background:var(--orange)}.order-note{font-size:13px;color:var(--muted);margin-top:6px}
+.feedback-modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.66);z-index:300;align-items:center;justify-content:center;padding:18px}
+.feedback-modal.open{display:flex}
+.feedback-box{width:min(520px,96vw);background:white;border-radius:28px;padding:22px;box-shadow:0 30px 80px rgba(15,23,42,.28)}
+.feedback-stars{display:flex;gap:8px;justify-content:center;margin:18px 0}
+.feedback-stars button{font-size:28px;background:#fff7ed;color:#f59e0b;border:1px solid #fed7aa;box-shadow:none;padding:10px 12px}
+.feedback-stars button.active{background:#f59e0b;color:white}
+.feedback-box textarea{width:100%;min-height:110px;resize:vertical;border:1px solid var(--line);border-radius:16px;padding:12px;font:inherit}
+.feedback-actions{display:flex;gap:10px;margin-top:14px}.feedback-actions button{flex:1}
+.profile-card{text-align:center;padding:24px}
+.avatar{width:76px;height:76px;border-radius:26px;background:linear-gradient(135deg,var(--green),#22c55e);color:white;display:grid;place-items:center;font-size:34px;margin:0 auto 12px}
+.notice{color:var(--muted);font-size:14px}
+.bottom-nav{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:100;
+    background:white;
+    border-top:1px solid var(--line);
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    padding:7px 4px 8px;
+    box-shadow:0 -10px 28px rgba(17,24,39,.10);
+}
+.nav-btn{
+    background:transparent;
+    color:#6b7280;
+    box-shadow:none;
+    border-radius:16px;
+    padding:7px 4px;
+    font-size:11px;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    align-items:center;
+}
+.nav-btn span{font-size:22px}
+.nav-btn.active{color:var(--green);background:#ecfdf5}
+.reserve{color:var(--red);font-weight:900;margin:8px 0}
+.empty{text-align:center;color:var(--muted);padding:20px}
+.desktop-layout{display:none}
+@media(min-width:850px){
+    body{padding-bottom:0}
+    .bottom-nav{display:none}
+    .screen{padding:24px}
+    .screen.active{display:block}
+    .menu-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .food-card{min-height:320px}
+    .food-img{height:140px}
+    .desktop-layout{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+    #screen-cart.desktop-side{display:block;position:sticky;top:115px;padding:0}
+}
+
+/* V17_DEVICE_ADAPTIVE_DESKTOP */
+.desktop-only{display:none}
+@media(min-width:901px){
+    body{padding-bottom:0}
+    .bottom-nav{display:none!important}
+    .app-header{position:sticky}
+    .screen{display:block!important;max-width:none;padding:0}
+    main{
+        max-width:1500px;
+        margin:22px auto;
+        padding:0 22px;
+        display:grid;
+        grid-template-columns:260px minmax(0,1fr) 390px;
+        gap:20px;
+        align-items:start;
+    }
+    .desktop-only{display:block}
+    .desktop-sidebar{
+        position:sticky;
+        top:105px;
+        background:white;
+        border:1px solid var(--line);
+        border-radius:26px;
+        padding:16px;
+        box-shadow:var(--shadow);
+    }
+    .desktop-sidebar h3{margin:0 0 12px}
+    .desktop-sidebar .side-btn{
+        width:100%;
+        background:#f3f4f6;
+        color:#111827;
+        margin:5px 0;
+        text-align:left;
+        box-shadow:none;
+    }
+    .desktop-sidebar .side-btn:hover{background:#ecfdf5;color:var(--green)}
+    #screen-menu{grid-column:2}
+    #screen-cart{grid-column:3;position:sticky;top:105px}
+    #screen-orders{grid-column:2 / span 2}
+    #screen-notices{grid-column:2 / span 2}
+    #screen-profile{display:none!important}
+    #menuMobile{display:none!important}
+    .desktop-layout{display:block!important}
+    #screen-cart-desktop{display:none!important}
+    .menu-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .food-card{min-height:315px}
+    .food-img{height:132px}
+    .total-bar{bottom:auto}
+}
+@media(min-width:1250px){
+    .menu-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:900px){
+    .desktop-only{display:none!important}
+    .desktop-layout{display:none!important}
+    #menu{display:none!important}
+}
+
+
+/* V18_DESKTOP_CLEAN_LAYOUT */
+.branch-card{
+    background:white;
+    border:1px solid var(--line);
+    border-radius:24px;
+    overflow:hidden;
+    margin-bottom:12px;
+    box-shadow:var(--shadow);
+    cursor:pointer;
+}
+.branch-card.active{outline:3px solid rgba(22,122,60,.25);border-color:var(--green)}
+.branch-photo{
+    height:96px;
+    display:grid;
+    place-items:center;
+    font-size:44px;
+    background:linear-gradient(135deg,#ecfdf5,#eff6ff);
+}
+.branch-card-body{padding:12px}
+.branch-card-body b{display:block;margin-bottom:4px}
+.branch-card-body small{color:var(--muted)}
+@media(min-width:901px){
+    body{padding-bottom:0}
+    .bottom-nav{display:none!important}
+    .app-header{position:sticky}
+    main{
+        max-width:1500px;
+        margin:22px auto;
+        padding:0 22px;
+        display:grid;
+        grid-template-columns:260px minmax(0,1fr) 330px;
+        gap:20px;
+        align-items:start;
+    }
+    .desktop-only{display:block!important}
+    .desktop-sidebar{
+        grid-column:1;
+        position:sticky;
+        top:105px;
+        background:white;
+        border:1px solid var(--line);
+        border-radius:26px;
+        padding:16px;
+        box-shadow:var(--shadow);
+    }
+    .desktop-sidebar h3{margin:0 0 12px}
+    .desktop-sidebar .side-btn{
+        width:100%;
+        background:#f3f4f6;
+        color:#111827;
+        margin:5px 0;
+        text-align:left;
+        box-shadow:none;
+    }
+    .desktop-sidebar .side-btn.active{background:#ecfdf5;color:var(--green)}
+    .screen{display:none!important;max-width:none;padding:0}
+    .screen.desktop-active{display:block!important}
+    #screen-menu.desktop-active{grid-column:2}
+    #screen-cart.desktop-active,
+    #screen-orders.desktop-active{grid-column:2 / span 2}
+    #screen-profile{display:none!important}
+    #desktopBranchPanel{
+        grid-column:3;
+        position:sticky;
+        top:105px;
+        display:block!important;
+    }
+    #desktopBranchPanel.hidden{display:none!important}
+    .branch-pills{display:none!important}
+    #menuMobile{display:none!important}
+    .desktop-layout{display:block!important}
+    #screen-cart-desktop{display:none!important}
+    .menu-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .food-card{min-height:315px}
+    .food-img{height:132px}
+    .total-bar{bottom:auto}
+}
+@media(min-width:1250px){
+    .menu-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:900px){
+    .desktop-only{display:none!important}
+    #desktopBranchPanel{display:none!important}
+    .desktop-layout{display:none!important}
+    #menu{display:none!important}
+}
+
+.qr-box{width:170px;height:170px;background:white;border-radius:18px;padding:10px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;margin:8px 0}
+.qr-box img{width:150px!important;height:150px!important}
+
+/* V21_MOBILE_QR_AND_ALERTS */
+.qr-box{cursor:pointer;transition:.18s transform}
+.qr-box.qr-big{
+    position:fixed!important;
+    inset:0!important;
+    z-index:99999!important;
+    width:100vw!important;
+    height:100vh!important;
+    max-width:none!important;
+    max-height:none!important;
+    margin:0!important;
+    border-radius:0!important;
+    background:rgba(255,255,255,.98)!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    flex-direction:column!important;
+}
+.qr-box.qr-big img,
+.qr-box.qr-big canvas{
+    width:min(82vw,520px)!important;
+    height:min(82vw,520px)!important;
+}
+.qr-box.qr-big::after{
+    content:"Нажмите ещё раз, чтобы уменьшить";
+    margin-top:18px;
+    color:#111827;
+    font-weight:900;
+}
+.ready-toast{
+    position:fixed;
+    left:14px;
+    right:14px;
+    top:14px;
+    z-index:100000;
+    background:#16a34a;
+    color:white;
+    border-radius:22px;
+    padding:16px;
+    box-shadow:0 20px 50px rgba(0,0,0,.25);
+    font-weight:900;
+    text-align:center;
+    animation:readyPulse .9s infinite alternate;
+}
+@keyframes readyPulse{from{transform:scale(1)}to{transform:scale(1.025)}}
+
+/* V23_CART_BADGE_SOUND_TEST */
+.nav-btn{position:relative}
+.cart-badge{
+    position:absolute;
+    top:2px;
+    right:18%;
+    min-width:20px;
+    height:20px;
+    border-radius:999px;
+    background:#dc2626;
+    color:white;
+    font-size:12px;
+    font-weight:950;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:0 5px;
+    border:2px solid white;
+}
+.cart-badge.show{display:flex}
+.cart-summary-line{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+}
+.sound-test-box{
+    margin-top:10px;
+    background:#f8fafc;
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:10px;
+}
+
+/* V24_SOUND_AND_DESKTOP_BADGE */
+.desktop-sidebar .side-btn{position:relative}
+.desktop-badge{right:12px!important;top:9px!important}
+.sound-help{
+    margin-top:8px;
+    padding:9px;
+    border-radius:14px;
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+    color:#9a3412;
+    font-size:12px;
+}
+
+/* V27_BRANCH_DROPDOWN_CLOSE */
+.mobile-branch-select{
+    display:none;
+    margin-bottom:12px;
+    font-weight:900;
+    background:white;
+}
+.branch-card.closed,
+.branch-pill.closed{
+    opacity:.55;
+    filter:grayscale(.8);
+}
+.closed-label{
+    display:inline-block;
+    margin-top:6px;
+    padding:4px 8px;
+    border-radius:999px;
+    background:#fee2e2;
+    color:#991b1b;
+    font-weight:900;
+    font-size:12px;
+}
+@media(max-width:900px){
+    .mobile-branch-select{display:block}
+    .branch-pills{display:none!important}
+}
+
+/* V28_CLOSED_BRANCH_FOOD_PNG */
+.closed-branch-warning{
+    background:#f3f4f6;
+    color:#6b7280;
+    border:2px dashed #9ca3af;
+    border-radius:24px;
+    padding:18px;
+    margin:12px 0;
+    font-weight:900;
+    text-align:center;
+}
+.closed-branch-lock{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(243,244,246,.82);
+    color:#4b5563;
+    font-size:42px;
+    z-index:3;
+    border-radius:22px;
+}
+.food-card.closed-food{
+    position:relative;
+    pointer-events:none;
+    filter:grayscale(1);
+    opacity:.62;
+}
+.food-card.closed-food button{
+    background:#9ca3af!important;
+}
+.food-img img{
+    object-fit:contain!important;
+    padding:8px;
+}
+
+/* V33_EXPIRING_WARNING */
+.expire-toast{
+    position:fixed;
+    left:14px;
+    right:14px;
+    top:86px;
+    z-index:100000;
+    background:#f59e0b;
+    color:#111827;
+    border-radius:22px;
+    padding:16px;
+    box-shadow:0 20px 50px rgba(0,0,0,.22);
+    font-weight:950;
+    text-align:center;
+    border:2px solid #fcd34d;
+}
+.expire-warning-line{
+    background:#fffbeb;
+    border:1px solid #fcd34d;
+    color:#92400e;
+    padding:9px;
+    border-radius:14px;
+    margin-top:8px;
+    font-weight:900;
+}
+
+/* V40_CART_REMOVE_FIX */
+.qty-controls{
+    flex-wrap:wrap;
+}
+.qty-controls button{
+    min-width:42px;
+}
+
+/* V41_CART_DOM_FIX */
+.cart-summary-line{
+    align-items:center;
+    flex-wrap:wrap;
+}
+.cart-summary-line button{
+    padding:6px 10px;
+    border-radius:10px;
+    margin:2px;
+}
+
+/* V44_IMAGE_STABILITY */
+.food-img{
+    width:100%;
+    aspect-ratio:4 / 3;
+    height:auto!important;
+    min-height:120px;
+    max-height:190px;
+}
+.food-img img{
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+    object-position:center!important;
+    display:block;
+}
+.hero-card .food-img{
+    min-height:145px;
+    max-height:230px;
+}
+@media(min-width:901px){
+    .food-img{
+        min-height:135px;
+        max-height:180px;
+    }
+    .hero-card .food-img{
+        min-height:180px;
+        max-height:260px;
+    }
+}
+@media(max-width:520px){
+    .food-img{
+        min-height:105px;
+        max-height:145px;
+    }
+    .hero-card .food-img{
+        min-height:135px;
+        max-height:190px;
+    }
+}
+
+/* V46_PRICE_DISCOUNT */
+.old-price{
+    color:#9ca3af;
+    text-decoration:line-through;
+    font-size:14px;
+    font-weight:800;
+    margin-right:8px;
+}
+.new-price{
+    color:#dc2626;
+    font-size:22px;
+    font-weight:950;
+}
+.discount-badge{
+    display:inline-block;
+    background:#fee2e2;
+    color:#991b1b;
+    border-radius:999px;
+    padding:4px 8px;
+    font-size:12px;
+    font-weight:950;
+    margin-left:6px;
+}
+
+/* V57_SPECIAL_DESKTOP_IMAGE_FIX */
+@media(min-width:901px){
+    .hero-card{
+        max-width:760px;
+        margin:0 0 18px 0;
+    }
+
+    .hero-card .food-card{
+        display:grid;
+        grid-template-columns:260px 1fr;
+        grid-template-areas:
+            "img title"
+            "img desc"
+            "img meta"
+            "img price"
+            "img btn";
+        gap:8px 18px;
+        align-items:start;
+        min-height:auto!important;
+    }
+
+    .hero-card .food-img{
+        grid-area:img;
+        width:260px!important;
+        height:180px!important;
+        min-height:180px!important;
+        max-height:180px!important;
+        aspect-ratio:auto!important;
+        align-self:start;
+    }
+
+    .hero-card .food-img img{
+        width:100%!important;
+        height:100%!important;
+        object-fit:cover!important;
+        object-position:center!important;
+    }
+
+    .hero-card h3{grid-area:title;margin:0}
+    .hero-card p{grid-area:desc;margin:0}
+    .hero-card .meta-row{grid-area:meta}
+    .hero-card .price{grid-area:price}
+    .hero-card button{grid-area:btn;width:max-content;min-width:180px}
+}
+
+/* V76_CURRENT_ORDER_UX — one responsive component for desktop + mobile */
+.current-orders-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 12px}
+.current-order-card{
+    position:relative;
+    overflow:hidden;
+    border:2px solid rgba(22,122,60,.22);
+    background:linear-gradient(135deg,#ffffff,#f0fdf4);
+    padding:18px;
+}
+.current-order-card.ready-now{
+    border-color:#16a34a;
+    box-shadow:0 18px 50px rgba(22,163,74,.18);
+}
+.current-order-card.payment-wait{
+    border-color:#f59e0b;
+    background:linear-gradient(135deg,#fff,#fffbeb);
+}
+.current-order-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.current-order-number{font-size:28px;font-weight:950;line-height:1}
+.current-order-amount{font-size:24px;font-weight:950;white-space:nowrap}
+.current-order-guidance{
+    margin:12px 0;
+    padding:12px 14px;
+    border-radius:18px;
+    background:#ecfdf5;
+    color:#166534;
+    font-weight:900;
+}
+.current-order-card.payment-wait .current-order-guidance{background:#fff7ed;color:#9a3412}
+.order-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.order-actions button{margin:0!important}
+.payment-hold-timer{font-weight:950;color:#b45309;margin-top:8px}
+.orders-history-title{margin:24px 0 10px;color:var(--muted)}
+.payment-modal{display:none;position:fixed;inset:0;z-index:400;background:rgba(15,23,42,.72);align-items:center;justify-content:center;padding:18px}
+.payment-modal.open{display:flex}
+.payment-panel{width:min(540px,96vw);background:white;border-radius:30px;padding:24px;box-shadow:0 30px 90px rgba(15,23,42,.35)}
+.payment-panel h2{margin:0 0 8px}.payment-big-timer{font-size:34px;font-weight:950;color:#b45309;margin:14px 0}
+.payment-panel-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(min-width:901px){
+    #screen-orders .current-order-card{max-width:980px}
+    #screen-orders .order-items-summary{max-width:680px}
+}
+@media(max-width:900px){
+    .current-order-top{display:block}
+    .current-order-amount{margin-top:8px}
+    .current-order-number{font-size:24px}
+    .payment-panel-actions{grid-template-columns:1fr}
+    .order-actions button{flex:1 1 145px}
+}
+
+
+/* V80_RELEASE_POLISH */
+.offline-banner{display:none;position:sticky;top:0;z-index:100001;background:#991b1b;color:white;padding:9px 14px;text-align:center;font-weight:900}
+.offline-banner.show{display:block}
+.install-app-btn{display:none;background:#0f766e!important}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(37,99,235,.35);outline-offset:2px}
+@media(max-width:900px){
+    body{padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+    .bottom-nav{padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+    button{min-height:44px}
+    .app-header{padding-top:calc(14px + env(safe-area-inset-top))}
+    .current-order-card{padding:16px 14px}
+}
+@media(min-width:901px){
+    .app-header .header-row,.app-header .search-box{max-width:1500px;margin-left:auto;margin-right:auto}
+    .app-header .search-box{margin-top:12px}
+}
+
+
+.app-popup-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:200000;
+    background:rgba(15,23,42,.62);
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+}
+.app-popup-overlay.open{display:flex}
+.app-popup{
+    width:min(440px,94vw);
+    background:white;
+    border-radius:26px;
+    padding:22px;
+    box-shadow:0 30px 90px rgba(15,23,42,.35);
+    animation:appPopupIn .18s ease-out;
+}
+.app-popup-icon{
+    width:58px;
+    height:58px;
+    margin:0 auto 14px;
+    border-radius:20px;
+    display:grid;
+    place-items:center;
+    background:#ecfdf5;
+    font-size:30px;
+}
+.app-popup-message{
+    text-align:center;
+    font-size:16px;
+    line-height:1.45;
+    font-weight:700;
+    white-space:pre-wrap;
+    overflow-wrap:anywhere;
+}
+.app-popup button{
+    width:100%;
+    margin-top:18px;
+}
+@keyframes appPopupIn{
+    from{opacity:0;transform:translateY(10px) scale(.97)}
+    to{opacity:1;transform:translateY(0) scale(1)}
+}
+
+</style>
+</head>
+<body>
+<div id="offlineBanner" class="offline-banner">Нет соединения с сервером. Меню можно просматривать, но заказ и оплата сейчас недоступны.</div>
+<header class="app-header">
+    <div class="header-row">
+        <div class="brand"><div class="logo">🍽️</div><div>ВГМУ Буфет<br><small style="font-weight:500;opacity:.8">заказ без очереди</small></div></div>
+        <div id="userBox" class="user-chip">Вы не вошли</div>
+    </div>
+    <div class="search-box">
+        <input id="searchInput" placeholder="🔍 Найти блюдо" oninput="renderMenu()">
+        <button onclick="enableNotifications()" title="Включить звук и уведомления">🔊</button><button onclick="testPhoneAlert()" title="Проверить звук и вибрацию">▶️</button>
+    </div>
+</header>
+<audio id="alarmAudio" src="/static/alarm.wav" preload="auto" playsinline></audio>
+
+<main>
+    <aside class="desktop-sidebar desktop-only">
+        <h3>👤 Вход</h3>
+        <input id="phoneDesktop" placeholder="+79081234567 или 89081234567">
+        <button id="loginBtnDesktop" style="width:100%;margin-top:8px" onclick="loginFromDesktop()">Войти</button>
+        <button id="logoutBtnDesktop" style="display:none;width:100%;margin-top:8px;background:var(--red)" onclick="logout()">Выйти</button>
+        <button id="installBtnDesktop" class="install-app-btn" style="width:100%;margin-top:8px" onclick="installApp()">Установить приложение</button>
+        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+        <button class="side-btn active" onclick="showDesktop('menu', this)">🍔 Меню</button>
+        <button class="side-btn" onclick="showDesktop('cart', this)">🛒 Корзина <b id="cartBadgeDesktop" class="cart-badge desktop-badge">0</b></button>
+        <button class="side-btn" onclick="showDesktop('orders', this)">📦 Заказы</button>
+            </aside>
+
+    <section id="screen-menu" class="screen active desktop-active">
+        <select id="mobileBranchSelect" class="mobile-branch-select" onchange="selectBranch(this.value)"></select>
+        <div class="branch-pills" id="branchPills"></div>
+        <div class="category-row">
+            <button class="cat active" onclick="setCategory('all', this)">Все</button>
+            <button class="cat" onclick="setCategory('special', this)">🔥 Акции</button>
+            <button class="cat" onclick="setCategory('combo', this)">🍱 Комбо</button>
+            <button class="cat" onclick="setCategory('food', this)">🍔 Блюда</button>
+        </div>
+
+        <div id="specialBox"></div>
+        <div id="combosBox" class="combo-section"></div>
+
+        <div class="desktop-layout">
+            <div>
+                <div id="menu" class="menu-grid"></div>
+            </div>
+            <section id="screen-cart-desktop" class="screen desktop-side active" style="display:none"></section>
+        </div>
+        <div id="menuMobile" class="menu-grid"></div>
+    </section>
+
+    <aside id="desktopBranchPanel" class="desktop-only">
+        <div class="card">
+            <h2>🏪 Выбор буфета</h2>
+            <div id="desktopBranchCards"></div>
+        </div>
+    </aside>
+
+    <section id="screen-cart" class="screen">
+        <h2>🛒 Корзина</h2>
+        <div id="cart"></div>
+        <div id="cartDetails" class="card" style="display:none"></div>
+        <label>Предзаказ на сегодня</label>
+        <input id="pickupTime" type="datetime-local">
+        <div id="reserveInfo" class="reserve"></div>
+        <div class="total-bar">
+            <div>Итого</div>
+            <h2><span id="total">0</span> ₽</h2>
+            <button id="submitBtn" style="width:100%;margin-top:12px;background:white;color:var(--green)" onclick="submitOrder()">Оформить заказ</button>
+        </div>
+    </section>
+
+    <section id="screen-orders" class="screen">
+        <h2>📦 Мои заказы</h2>
+        <div id="orders"></div>
+    </section>
+<section id="screen-profile" class="screen">
+        <div class="card profile-card">
+            <div class="avatar">👤</div>
+            <h2 id="profileName">Вход по телефону</h2>
+            <input id="phone" placeholder="+79081234567 или 89081234567">
+            <button id="loginBtn" style="width:100%;margin-top:10px" onclick="login()">Войти</button>
+            <button id="logoutBtn" style="display:none;width:100%;margin-top:10px;background:var(--red)" onclick="logout()">Выйти</button>
+            <button id="installBtn" class="install-app-btn" style="width:100%;margin-top:10px" onclick="installApp()">Установить приложение</button>
+            <p class="notice">Профиль сохраняет историю заказов и показывает QR-код для выдачи.</p>
+        </div>
+    </section>
+</main>
+
+
+<div id="paymentModal" class="payment-modal" onclick="if(event.target===this) closePaymentPanel()">
+    <div class="payment-panel">
+        <h2>💳 Оплата заказа</h2>
+        <p id="paymentPanelText" class="notice">Товар зарезервирован на время оплаты.</p>
+        <div id="paymentBigTimer" class="payment-big-timer">10:00</div>
+        <div class="payment-panel-actions">
+            <button onclick="goToPayment()" style="background:var(--blue)">Перейти в ЮKassa</button>
+            <button onclick="checkPendingPaymentFromPanel()" style="background:#475569">Проверить оплату</button>
+        </div>
+        <button onclick="closePaymentPanel()" style="width:100%;margin-top:10px;background:#e5e7eb;color:#111827">Вернуться к заказу</button>
+    </div>
+</div>
+
+<div id="ratingModal" class="feedback-modal" onclick="if(event.target===this) closeRatingModal()">
+    <div class="feedback-box">
+        <h2 style="margin-top:0">Как вам заказ?</h2>
+        <p style="color:var(--muted)">Оценка помогает буфету понять, что нравится студентам, а что стоит улучшить.</p>
+        <div id="ratingStars" class="feedback-stars">
+            </div>
+        <textarea id="ratingComment" maxlength="500" placeholder="Комментарий — по желанию"></textarea>
+        <div id="ratingCounter" style="text-align:right;color:var(--muted);font-size:13px">0 / 500</div>
+        <div class="feedback-actions">
+            <button onclick="submitRating()">Отправить</button>
+            <button onclick="closeRatingModal()" style="background:#64748b">Позже</button>
+        </div>
+    </div>
+</div>
+
+<nav class="bottom-nav">
+    <button class="nav-btn active" onclick="showScreen('menu', this)"><span>🍔</span>Меню</button>
+    <button class="nav-btn" onclick="showScreen('cart', this)"><span>🛒</span><b id="cartBadge" class="cart-badge">0</b>Корзина</button>
+    <button class="nav-btn" onclick="showScreen('orders', this)"><span>📦</span>Заказы</button>
+        <button class="nav-btn" onclick="showScreen('profile', this)"><span>👤</span>Профиль</button>
+</nav>
+
+
+<div id="appPopupOverlay" class="app-popup-overlay" onclick="if(event.target===this) closePopup()">
+    <div class="app-popup" role="dialog" aria-modal="true" aria-labelledby="appPopupMessage">
+        <div class="app-popup-icon">ℹ️</div>
+        <div id="appPopupMessage" class="app-popup-message"></div>
+        <button type="button" onclick="closePopup()">Понятно</button>
+    </div>
+</div>
+
+<script>
+
+function showPopup(message){
+    const overlay = document.getElementById('appPopupOverlay')
+    const messageBox = document.getElementById('appPopupMessage')
+    if(!overlay || !messageBox) return
+    messageBox.textContent = String(message ?? '')
+    overlay.classList.add('open')
+}
+
+function closePopup(){
+    const overlay = document.getElementById('appPopupOverlay')
+    if(overlay) overlay.classList.remove('open')
+}
+
+document.addEventListener('keydown', event => {
+    if(event.key === 'Escape') closePopup()
+})
+
+const socket = (typeof io === 'function') ? io() : {on(){}, emit(){}}
+let currentUser = null
+let cart = []
+let branchId = 1
+let branchesCache = []
+let menuCache = []
+let comboCache = []
+let orderCache = []
+let branchSchedule = []
+let category = 'all'
+let reserveExpiresAt = null
+let reserveTimer = null
+let ratingOrderId = null
+let ratingStarsValue = 0
+let pendingPaymentUrl = null
+let pendingPaymentOrderId = null
+let pendingPaymentExpiresAt = null
+let deferredInstallPrompt = null
+
+window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault()
+    deferredInstallPrompt = event
+    document.querySelectorAll('.install-app-btn').forEach(btn => btn.style.display='block')
+})
+
+window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null
+    document.querySelectorAll('.install-app-btn').forEach(btn => btn.style.display='none')
+})
+
+async function installApp(){
+    if(!deferredInstallPrompt){
+        showPopup('Установка станет доступна в меню браузера, когда сайт будет открыт по HTTPS и браузер разрешит установку.')
+        return
+    }
+    deferredInstallPrompt.prompt()
+    try{ await deferredInstallPrompt.userChoice }catch(e){}
+    deferredInstallPrompt = null
+    document.querySelectorAll('.install-app-btn').forEach(btn => btn.style.display='none')
+}
+
+function updateOnlineState(){
+    const online = navigator.onLine
+    offlineBanner.classList.toggle('show', !online)
+    if(typeof submitBtn !== 'undefined') submitBtn.disabled = !online || selectedBranchIsClosed()
+}
+window.addEventListener('online', updateOnlineState)
+window.addEventListener('offline', updateOnlineState)
+
+if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js', {scope:'/'}).catch(() => {})
+    })
+}
+
+function safeText(value){
+    return String(value ?? '')
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'",'&#039;')
+}
+
+function orderProgress(order){
+    if(['canceled','expired'].includes(order.status)) return ''
+    const steps=['new','cooking','ready','issued']
+    const idx=Math.max(0,steps.indexOf(order.status))
+    return `<div class="order-progress" title="Принят → В работе → Готов → Выдан">${steps.map((_,i)=>`<span class="${i<idx?'done':i===idx?'current':''}"></span>`).join('')}</div>`
+}
+
+function orderGuidance(order){
+    const payment = order.payment_status || 'unpaid'
+    if(payment === 'pending') return 'Завершите онлайн-оплату. Товар удерживается за вами до окончания платёжной брони.'
+    if(payment === 'refund_required') return 'Оплата требует проверки администратором. Повторно не оплачивайте этот заказ.'
+    if(order.status === 'new') return order.pickup_time ? 'Заказ принят. Буфет увидит время предзаказа и возьмёт его в работу.' : 'Заказ принят. Буфет скоро возьмёт его в работу.'
+    if(order.status === 'cooking') return 'Заказ готовится. Ожидайте уведомления «Готов к выдаче».'
+    if(order.status === 'ready') return 'Заказ готов — можно идти в выбранный буфет. Покажите QR-код или код выдачи.'
+    if(order.status === 'issued') return 'Заказ выдан. Спасибо!'
+    if(order.status === 'expired') return 'Время получения истекло.'
+    if(order.status === 'canceled') return 'Заказ отменён.'
+    return ''
+}
+
+function paymentHoldRemaining(expiresAt){
+    if(!expiresAt) return ''
+    const end = new Date(String(expiresAt).replace(' ', 'T'))
+    const sec = Math.max(0, Math.floor((end - new Date()) / 1000))
+    const min = Math.floor(sec / 60)
+    const rest = sec % 60
+    return `${String(min).padStart(2,'0')}:${String(rest).padStart(2,'0')}`
+}
+
+function renderOrderCard(order, featured=false){
+    const active = ['new','cooking','ready'].includes(order.status)
+    const pending = (order.payment_status || 'unpaid') === 'pending'
+    const ready = order.status === 'ready'
+    const cls = featured ? `current-order-card ${ready?'ready-now':''} ${pending?'payment-wait':''}` : ''
+    return `
+        <div class="card order-card ${cls}">
+            <div class="current-order-top">
+                <div>
+                    <div class="${featured?'current-order-number':''}">Заказ #${order.id}</div>
+                    <div class="order-note">🏪 ${safeText(order.branch_name)}</div>
+                </div>
+                <div class="${featured?'current-order-amount':''}">💰 ${Number(order.total || 0)} ₽</div>
+            </div>
+            <span class="status">${safeText(statuses[order.status] || order.status)}</span>
+            ${orderProgress(order)}
+            ${featured ? `<div class="current-order-guidance">${safeText(orderGuidance(order))}</div>` : ''}
+            ${order.pickup_time ? `<div class="order-note">⏰ Предзаказ: ${safeText(order.pickup_time)}</div>` : ''}
+            <div class="order-items-summary">${(order.items || []).map(i => `<b>${safeText(i.name)}</b> × ${Number(i.quantity || 0)}`).join('<br>') || 'Состав заказа недоступен'}</div>
+            ${ready ? `<div id="qr_${order.id}" class="qr-box" data-code="${safeText(order.pickup_code || '')}"></div><div class="reserve">Код выдачи: <b>${safeText(order.pickup_code || '—')}</b></div>${formatExpire(order.expires_at)}` : ''}
+            <span class="status">${paymentStatusText(order)}</span>
+            ${pending && order.payment_hold_expires_at ? `<div class="payment-hold-timer" data-payment-expires="${safeText(order.payment_hold_expires_at)}">Бронь оплаты: ${paymentHoldRemaining(order.payment_hold_expires_at)}</div>` : ''}
+            <div class="order-actions">
+                ${['unpaid','pending'].includes(order.payment_status || 'unpaid') && active ? `<button style="background:#2563eb" onclick="payOrder(${order.id}, this)">${pending ? 'Продолжить оплату' : 'Оплатить онлайн'}</button>` : ''}
+                ${pending ? `<button style="background:#475569" onclick="checkPayment(${order.id}, this)">Проверить оплату</button>` : ''}
+                ${order.status === 'new' ? `<button style="background:var(--red)" onclick="cancelOrder(${order.id})">Отменить</button>` : ''}
+            </div>
+            ${order.status === 'issued' && !order.rated ? `<div class="rating-box"><b>Как вам заказ?</b><br><button onclick="openRatingModal(${order.id})">Оценить и оставить комментарий</button></div>` : ''}
+            ${order.status === 'issued' && order.rated ? `<div class="rating-box">Спасибо за оценку: ${'⭐'.repeat(Number(order.rating_stars || 0))}${order.rating_comment ? `<div class="order-note">Ваш комментарий: ${safeText(order.rating_comment)}</div>` : ''}</div>` : ''}
+        </div>
+    `
+}
+
+function updatePaymentCountdowns(){
+    document.querySelectorAll('[data-payment-expires]').forEach(el => {
+        const value = el.dataset.paymentExpires
+        const remain = paymentHoldRemaining(value)
+        el.textContent = remain === '00:00' ? 'Платёжная бронь истекла — обновляем статус…' : `Бронь оплаты: ${remain}`
+    })
+
+    if(paymentModal.classList.contains('open') && pendingPaymentExpiresAt){
+        const remain = paymentHoldRemaining(pendingPaymentExpiresAt)
+        paymentBigTimer.textContent = remain || '—'
+    }
+}
+
+function openPaymentPanel(orderId, paymentUrl, expiresAt){
+    pendingPaymentOrderId = orderId
+    pendingPaymentUrl = paymentUrl
+    pendingPaymentExpiresAt = expiresAt || null
+    paymentPanelText.textContent = `Заказ #${orderId}. Перейдите на защищённую страницу оплаты. После возврата приложение само проверит статус.`
+    paymentBigTimer.textContent = paymentHoldRemaining(expiresAt) || '10:00'
+    paymentModal.classList.add('open')
+}
+
+function closePaymentPanel(){
+    paymentModal.classList.remove('open')
+}
+
+function goToPayment(){
+    if(!pendingPaymentUrl){ showPopup('Ссылка оплаты не получена'); return }
+    window.location.href = pendingPaymentUrl
+}
+
+async function checkPendingPaymentFromPanel(){
+    if(!pendingPaymentOrderId) return
+    await checkPayment(pendingPaymentOrderId)
+    closePaymentPanel()
+}
+
+const notifiedReady = new Set()
+const notifiedExpiring = new Set()
+let audioCtx = null
+let soundUnlocked = false
+
+const statuses = {
+    new:'🆕 Заказ принят',
+    cooking:'👨‍🍳 Заказ готовится',
+    ready:'📦 Готов к выдаче',
+    issued:'✅ Заказ выдан',
+    expired:'⌛ Время получения истекло',
+    canceled:'❌ Заказ отменён'
+}
+
+socket.on('update', () => {
+    loadMenu()
+    loadCombos()
+    updatePickupLimits()
+
+    if(currentUser){
+        loadOrders()
+    }
+})
+
+function mobileRefreshOrders(name){
+    if(name === 'orders' && currentUser){
+        loadOrders()
+    }
+}
+
+function showScreen(name, btn){
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'))
+    document.getElementById('screen-' + name).classList.add('active')
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'))
+    if(btn) btn.classList.add('active')
+
+    mobileRefreshOrders(name)
+}
+
+function setCategory(cat, btn){
+    category = cat
+    document.querySelectorAll('.cat').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    renderMenu()
+}
+
+let alarmUnlocked = false
+
+async function unlockSound(){
+    try{
+        alarmAudio.muted = false
+        alarmAudio.volume = 1
+        alarmAudio.currentTime = 0
+
+        await alarmAudio.play()
+        alarmAudio.pause()
+        alarmAudio.currentTime = 0
+
+        alarmUnlocked = true
+
+        try{
+            localStorage.setItem('vgmu_sound_unlocked', '1')
+        }catch(e){}
+
+        return true
+    }catch(e){
+        try{
+            audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)()
+
+            if(audioCtx.state === 'suspended'){
+                await audioCtx.resume()
+            }
+
+            const oscillator = audioCtx.createOscillator()
+            const gain = audioCtx.createGain()
+
+            oscillator.connect(gain)
+            gain.connect(audioCtx.destination)
+
+            oscillator.type = 'square'
+            oscillator.frequency.value = 880
+            gain.gain.value = 0.15
+
+            oscillator.start()
+            oscillator.stop(audioCtx.currentTime + 0.25)
+
+            alarmUnlocked = true
+            localStorage.setItem('vgmu_sound_unlocked', '1')
+            return true
+        }catch(e2){
+            alarmUnlocked = false
+            return false
+        }
+    }
+}
+
+function webAudioBeep(times=4){
+    try{
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)()
+
+        if(audioCtx.state === 'suspended'){
+            audioCtx.resume()
+        }
+
+        for(let i=0;i<times;i++){
+            const oscillator = audioCtx.createOscillator()
+            const gain = audioCtx.createGain()
+
+            oscillator.connect(gain)
+            gain.connect(audioCtx.destination)
+
+            oscillator.type = 'square'
+            oscillator.frequency.value = i % 2 === 0 ? 990 : 740
+            gain.gain.value = 0.18
+
+            const start = audioCtx.currentTime + i * 0.33
+            oscillator.start(start)
+            oscillator.stop(start + 0.22)
+        }
+    }catch(e){}
+}
+
+function beep(times=4){
+    try{
+        alarmAudio.pause()
+        alarmAudio.currentTime = 0
+        alarmAudio.volume = 1
+        alarmAudio.play().catch(() => {
+            webAudioBeep(times)
+        })
+
+        setTimeout(() => {
+            try{
+                alarmAudio.pause()
+                alarmAudio.currentTime = 0
+            }catch(e){}
+        }, Math.max(1800, times * 350))
+    }catch(e){
+        webAudioBeep(times)
+    }
+}
+
+async function enableNotifications(){
+    const soundOk = await unlockSound()
+
+    setTimeout(() => beep(2), 150)
+
+    let vibOk = false
+
+    if(navigator.vibrate){
+        vibOk = navigator.vibrate([300, 120, 300])
+    }
+
+    if('Notification' in window){
+        if(window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
+            const permission = await Notification.requestPermission()
+
+            if(permission === 'granted'){
+                showPopup((soundOk ? 'Звук включён. ' : 'Звук браузер заблокировал. ') + (vibOk ? 'Вибрация отправлена.' : 'Вибрация не сработала. На некоторых Android вибрация в Chrome отключается системой.'))
+                return
+            }
+        }
+    }
+
+    showPopup((soundOk ? 'Звук включён. ' : 'Звук браузер заблокировал. ') + (vibOk ? 'Вибрация отправлена.' : 'Вибрация не сработала. Проверьте настройки Chrome: Сайт → Разрешения → Звук/Уведомления.'))
+}
+
+async function testPhoneAlert(){
+    const soundOk = await unlockSound()
+
+    setTimeout(() => beep(6), 150)
+
+    let vibOk = false
+
+    if(navigator.vibrate){
+        vibOk = navigator.vibrate([600, 200, 600, 200, 600])
+    }
+
+    setTimeout(() => {
+        showPopup((soundOk ? 'Звук должен был проиграться. ' : 'Звук заблокирован браузером. ') + (vibOk ? 'Вибрация отправлена.' : 'Вибрация не сработала/не поддерживается.'))
+    }, 1400)
+}
+
+function showReadyToast(msg){
+    const old = document.querySelector('.ready-toast')
+    if(old) old.remove()
+
+    const toast = document.createElement('div')
+    toast.className = 'ready-toast'
+    toast.innerHTML = msg
+    toast.onclick = () => {
+        toast.remove()
+        showScreen('orders', document.querySelectorAll('.nav-btn')[2])
+    }
+
+    document.body.appendChild(toast)
+
+    setTimeout(() => {
+        if(toast.parentNode) toast.remove()
+    }, 12000)
+}
+
+function notifyReady(order){
+    if(notifiedReady.has(order.id)) return
+
+    notifiedReady.add(order.id)
+
+    const msg = `Заказ #${order.id} готов к выдаче.`
+
+    beep(6)
+
+    if(navigator.vibrate){
+        navigator.vibrate([400, 150, 400, 150, 400, 150, 400])
+    }
+
+    showReadyToast('📦 ' + msg + '<br>Нажмите, чтобы открыть QR-код')
+    addNotice('📦 ' + msg)
+
+    if('Notification' in window && Notification.permission === 'granted'){
+        try{
+            const n = new Notification('Заказ готов к выдаче', {
+                body: `Заказ #${order.id}. Откройте вкладку «Заказы» для QR-кода.`,
+                tag: 'order-ready-' + order.id,
+                requireInteraction: true,
+                silent: false,
+                vibrate: [400, 150, 400, 150, 400]
+            })
+
+            n.onclick = () => {
+                window.focus()
+                showScreen('orders', document.querySelectorAll('.nav-btn')[2])
+                n.close()
+            }
+        }catch(e){}
+    }
+}
+
+function showExpireToast(msg){
+    const old = document.querySelector('.expire-toast')
+    if(old) old.remove()
+
+    const toast = document.createElement('div')
+    toast.className = 'expire-toast'
+    toast.innerHTML = msg
+    toast.onclick = () => {
+        toast.remove()
+        showScreen('orders', document.querySelectorAll('.nav-btn')[2])
+    }
+
+    document.body.appendChild(toast)
+
+    setTimeout(() => {
+        if(toast.parentNode) toast.remove()
+    }, 15000)
+}
+
+function notifyExpiring(order){
+    if(!order.expires_at) return
+    if(notifiedExpiring.has(order.id)) return
+
+    const end = new Date(order.expires_at.replace(' ', 'T'))
+    const diff = end - new Date()
+
+    // Предупреждение после 20 минут ожидания: остаётся 10 минут до автоотмены.
+    if(diff > 0 && diff <= 10 * 60 * 1000){
+        notifiedExpiring.add(order.id)
+
+        const msg = `⚠️ Заказ #${order.id} скоро будет отменён. Осталось меньше 10 минут.`
+
+        showExpireToast(msg + '<br>Нажмите, чтобы открыть QR-код')
+        beep(3)
+
+        if(navigator.vibrate){
+            navigator.vibrate([250,120,250])
+        }
+
+        if('Notification' in window && Notification.permission === 'granted'){
+            try{
+                new Notification('Заказ скоро отменится', {
+                    body:`Заказ #${order.id}: осталось меньше 10 минут`,
+                    tag:'order-expiring-' + order.id,
+                    requireInteraction:true,
+                    silent:false,
+                    vibrate:[250,120,250]
+                })
+            }catch(e){}
+        }
+    }
+}
+
+function addNotice(text){
+    // Отдельную вкладку событий убрали, чтобы не захламлять интерфейс.
+    // Событие теперь показывается зелёным баннером и системным уведомлением.
+    console.log(text)
+}
+
+function getFoodPng(item){
+    const name = String(item.name || '').toLowerCase()
+
+    if(name.includes('кофе') || name.includes('американо') || name.includes('капуч')) return '/static/food/coffee.png'
+    if(name.includes('пицц')) return '/static/food/pizza.png'
+    if(name.includes('печ') || name.includes('cookie')) return '/static/food/cookie.png'
+    if(name.includes('салат')) return '/static/food/salad.png'
+    if(name.includes('комбо')) return '/static/food/combo.png'
+    if(name.includes('сэндв') || name.includes('бутер') || name.includes('sandwich')) return '/static/food/sandwich.png'
+
+    return ''
+}
+
+function priceHtml(item, fallbackPrice){
+    const oldPrice = Number(item.old_price || 0)
+    const discountPrice = Number(item.discount_price || 0)
+    const basePrice = Number(fallbackPrice || item.price || 0)
+
+    if(discountPrice > 0 && oldPrice > 0 && oldPrice > discountPrice){
+        const discount = Math.round((oldPrice - discountPrice) / oldPrice * 100)
+
+        return `
+            <div class="price">
+                <span class="old-price">${oldPrice} ₽</span>
+                <span class="new-price">${discountPrice} ₽</span>
+                <span class="discount-badge">−${discount}%</span>
+            </div>
+        `
+    }
+
+    return `<div class="price">${basePrice} ₽</div>`
+}
+
+function ratingText(item){
+    const count = Number(item.rating_count || 0)
+
+    if(!count){
+        return '⭐ Нет оценок'
+    }
+
+    return `⭐ ${Number(item.avg_stars || 0).toFixed(1)} (${count})`
+}
+
+function imageOrIcon(item){
+    item = item || {}
+
+    if(item.image){
+        return `<div class="food-img"><img src="/static/uploads/${item.image}" alt="${item.name || ''}" onerror="this.src='/static/uploads/default_sandwich.webp'"></div>`
+    }
+
+    return `<div class="food-img"><img src="${getFoodPng(item)}" alt="${item.name || ''}"></div>`
+}
+
+function getSelectedQuantity(item){
+    const stock = (item.all_stock || []).find(s => Number(s.id) === Number(branchId))
+    return stock ? Number(stock.quantity_available ?? stock.quantity) : Number(item.quantity || 0)
+}
+
+function getAvailableFromCache(id){
+    const item = menuCache.find(x => Number(x.id) === Number(id))
+    return item ? getSelectedQuantity(item) : 0
+}
+
+function branchImage(branch){
+    const n = String(branch.name || '').toLowerCase()
+    if(n.includes('подвал')) return '🏛️'
+    if(n.includes('1')) return '🥪'
+    if(n.includes('2')) return '☕'
+    return '🏪'
+}
+
+function renderBranches(){
+    branchPills.innerHTML = branchesCache.map(branch => `
+        <button class="branch-pill ${Number(branch.id)===Number(branchId)?'active':''} ${Number(branch.closed)===1?'closed':''}" onclick="selectBranch(${branch.id})">
+            🏪 ${branch.name}${Number(branch.closed)===1?' — закрыт':''}
+        </button>
+    `).join('')
+
+    if(typeof mobileBranchSelect !== 'undefined'){
+        mobileBranchSelect.innerHTML = branchesCache.map(branch => `
+            <option value="${branch.id}" ${Number(branch.id)===Number(branchId)?'selected':''}>
+                ${Number(branch.closed)===1?'🔴':'🟢'} ${branch.name}${Number(branch.closed)===1?' — закрыт':''}
+            </option>
+        `).join('')
+    }
+
+    if(typeof desktopBranchCards !== 'undefined'){
+        desktopBranchCards.innerHTML = branchesCache.map(branch => `
+            <div class="branch-card ${Number(branch.id)===Number(branchId)?'active':''} ${Number(branch.closed)===1?'closed':''}" onclick="selectBranch(${branch.id})">
+                <div class="branch-photo">${branchImage(branch)}</div>
+                <div class="branch-card-body">
+                    <b>${branch.name}</b>
+                    <small>${Number(branch.id)===Number(branchId)?'Выбран для заказа':'Нажмите, чтобы выбрать'}</small>
+                    ${Number(branch.closed)===1?`<div class="closed-label">Буфет закрыт${branch.closed_reason ? ': '+branch.closed_reason : ''}</div>`:''}
+                </div>
+            </div>
+        `).join('')
+    }
+}
+
+
+function selectBranch(id){
+    branchId = Number(id)
+    cart = []
+    renderCart()
+    renderBranches()
+
+    if(typeof mobileBranchSelect !== 'undefined'){
+        mobileBranchSelect.value = String(branchId)
+    }
+    socket.emit('join_branch', {branch_id: branchId})
+    updatePickupLimits()
+    loadMenu()
+}
+
+async function loadBranches(){
+    const res = await fetch('/api/branches')
+    branchesCache = await res.json()
+    if(branchesCache[0]) branchId = Number(branchesCache[0].id)
+    renderBranches()
+    socket.emit('join_branch', {branch_id: branchId})
+}
+
+async function loadSchedule(){
+    const res = await fetch('/api/schedule')
+    branchSchedule = await res.json()
+    updatePickupLimits()
+}
+
+function getBranchScheduleForSelectedDate(){
+    const d = new Date()
+    const jsDay = d.getDay()
+    const weekday = jsDay === 0 ? 6 : jsDay - 1
+    return branchSchedule.find(x => Number(x.branch_id) === Number(branchId) && Number(x.weekday) === weekday)
+}
+
+function selectedBranchIsClosed(){
+    const selectedBranch = branchesCache.find(b => Number(b.id) === Number(branchId))
+    return selectedBranch && Number(selectedBranch.closed) === 1
+}
+
+function selectedBranchClosedMessage(){
+    const selectedBranch = branchesCache.find(b => Number(b.id) === Number(branchId))
+
+    if(!selectedBranch) return 'Буфет закрыт'
+
+    return `${selectedBranch.name} закрыт${selectedBranch.closed_reason ? ': ' + selectedBranch.closed_reason : ''}. Выберите другой буфет.`
+}
+
+function updatePickupLimits(){
+    if(typeof pickupTime === 'undefined') return
+
+    if(selectedBranchIsClosed()){
+        pickupTime.value = ''
+        pickupTime.disabled = true
+        pickupTime.title = selectedBranchClosedMessage()
+        return
+    }
+
+    pickupTime.disabled = false
+    pickupTime.title = ''
+
+    const now = new Date()
+    const yyyy = now.getFullYear()
+    const mm = String(now.getMonth()+1).padStart(2,'0')
+    const dd = String(now.getDate()).padStart(2,'0')
+    const today = `${yyyy}-${mm}-${dd}`
+    const current = `${today}T${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+
+    pickupTime.min = current
+    pickupTime.max = `${today}T23:59`
+
+    const sched = getBranchScheduleForSelectedDate()
+
+    if(sched && Number(sched.enabled) === 1){
+        const open = `${today}T${sched.open_time}`
+        const close = `${today}T${sched.close_time}`
+        if(open > pickupTime.min) pickupTime.min = open
+        if(close < pickupTime.max) pickupTime.max = close
+    }
+
+    if(sched && Number(sched.enabled) !== 1){
+        pickupTime.value = ''
+        pickupTime.title = 'Буфет сегодня не работает'
+    }
+
+    if(pickupTime.value && (pickupTime.value < pickupTime.min || pickupTime.value > pickupTime.max)){
+        pickupTime.value = ''
+    }
+}
+
+function validatePickupTime(){
+    if(selectedBranchIsClosed()){
+        showPopup(selectedBranchClosedMessage())
+        return false
+    }
+
+    if(!pickupTime.value) return true
+    if(pickupTime.value < pickupTime.min){
+        showPopup('Нельзя выбрать прошедшее время или время до открытия буфета')
+        return false
+    }
+    if(pickupTime.value > pickupTime.max){
+        showPopup('Предзаказ доступен только на сегодня и только в рабочее время выбранного буфета')
+        return false
+    }
+    return true
+}
+
+async function login(){
+    const sourcePhone = (typeof phone !== 'undefined' && phone.value) ? phone.value : (typeof phoneDesktop !== 'undefined' ? phoneDesktop.value : '')
+
+    const res = await fetch('/api/auth', {credentials:'same-origin',
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({phone:sourcePhone})
+    })
+    const data = await res.json()
+    if(data.error){ showPopup(data.error); return false }
+
+    currentUser = data
+
+    try{
+        localStorage.setItem('vgmu_phone', sourcePhone)
+    }catch(e){}
+
+    userBox.innerHTML = `👤 ${data.name}`
+    profileName.innerHTML = data.name + '<br><small>' + data.phone + '</small>'
+    loginBtn.style.display = 'none'
+    logoutBtn.style.display = 'block'
+
+    if(typeof loginBtnDesktop !== 'undefined'){
+        loginBtnDesktop.style.display = 'none'
+        logoutBtnDesktop.style.display = 'block'
+    }
+
+    loadOrders()
+    return true
+}
+
+function loginFromDesktop(){
+    if(typeof phone !== 'undefined' && typeof phoneDesktop !== 'undefined'){
+        phone.value = phoneDesktop.value
+    }
+    return login()
+}
+
+function showDesktop(name, btn){
+    if(window.innerWidth <= 900){
+        showScreen(name, btn)
+        return
+    }
+
+    document.querySelectorAll('main > .screen').forEach(s => s.classList.remove('desktop-active'))
+    const target = document.getElementById('screen-' + name)
+    if(target) target.classList.add('desktop-active')
+
+    document.querySelectorAll('.desktop-sidebar .side-btn').forEach(b => b.classList.remove('active'))
+    if(btn) btn.classList.add('active')
+
+    if(typeof desktopBranchPanel !== 'undefined'){
+        desktopBranchPanel.classList.toggle('hidden', name !== 'menu')
+    }
+}
+
+async function logout(){
+    await fetch('/api/logout', {method:'POST'})
+    currentUser = null
+    userBox.innerHTML = 'Вы не вошли'
+    profileName.innerHTML = 'Вход по телефону'
+    loginBtn.style.display = 'block'
+    logoutBtn.style.display = 'none'
+
+    if(typeof loginBtnDesktop !== 'undefined'){
+        loginBtnDesktop.style.display = 'block'
+        logoutBtnDesktop.style.display = 'none'
+    }
+
+    orders.innerHTML = ''
+
+    try{
+        localStorage.removeItem('vgmu_phone')
+    }catch(e){}
+}
+
+async function autoLoginBySavedPhone(){
+    try{
+        const savedPhone = localStorage.getItem('vgmu_phone')
+
+        if(!savedPhone) return false
+
+        const res = await fetch('/api/auth',{credentials:'same-origin',
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({phone:savedPhone})
+        })
+
+        if(!res.ok) return false
+
+        const data = await res.json()
+
+        if(data.error) return false
+
+        currentUser = data
+
+        userBox.innerHTML = `👤 ${data.name}`
+        profileName.innerHTML = data.name + '<br><small>' + data.phone + '</small>'
+
+        loginBtn.style.display = 'none'
+        logoutBtn.style.display = 'block'
+
+        if(typeof loginBtnDesktop !== 'undefined'){
+            loginBtnDesktop.style.display = 'none'
+            logoutBtnDesktop.style.display = 'block'
+        }
+
+        await loadOrders()
+        return true
+    }catch(e){
+        return false
+    }
+}
+
+async function restore(){
+    const res = await fetch('/api/me', {credentials:'same-origin'})
+    if(res.ok){
+        currentUser = await res.json()
+        userBox.innerHTML = `👤 ${currentUser.name}`
+        profileName.innerHTML = currentUser.name + '<br><small>' + currentUser.phone + '</small>'
+        loginBtn.style.display = 'none'
+        logoutBtn.style.display = 'block'
+
+        if(typeof loginBtnDesktop !== 'undefined'){
+            loginBtnDesktop.style.display = 'none'
+            logoutBtnDesktop.style.display = 'block'
+        }
+
+        loadOrders()
+    }
+}
+
+async function loadCombos(){
+    const res = await fetch('/api/combos')
+    comboCache = await res.json()
+    renderCombos()
+}
+
+function renderCombos(){
+    if(category !== 'all' && category !== 'combo'){
+        combosBox.innerHTML = ''
+        return
+    }
+
+    if(!comboCache.length){
+        combosBox.innerHTML = ''
+        return
+    }
+
+    const selectedBranch = branchesCache.find(b => Number(b.id) === Number(branchId))
+    const selectedBranchClosed = selectedBranch && Number(selectedBranch.closed) === 1
+
+    combosBox.innerHTML = `
+        <h2>🍱 Комбо</h2>
+        <div class="menu-grid">
+            ${comboCache.map(combo => `
+                <div class="food-card ${selectedBranchClosed?'closed-food':''}">
+                    ${selectedBranchClosed?'<div class="closed-branch-lock">🔒</div>':''}
+                    ${combo.items && combo.items[0] ? imageOrIcon(combo.items[0]) : imageOrIcon(combo)}
+                    <h3>${combo.name || 'Комбо'}</h3>
+                    <p>${combo.description || ''}</p>
+                    <div class="meta-row"><span>${combo.items.map(i => `${i.icon || ''} ${i.name}`).join(', ')}</span></div>
+                    <div class="price">${combo.price} ₽</div>
+                    <button ${selectedBranchClosed?'disabled':''} onclick='addComboToCart(${combo.id}, ${JSON.stringify(combo.name)}, ${combo.price}, ${JSON.stringify(combo.icon || '🍱')})'>Заказать</button>
+                </div>
+            `).join('')}
+        </div>
+    `
+}
+
+async function loadMenu(){
+    const res = await fetch('/api/menu?branch_id=' + branchId)
+    menuCache = await res.json()
+    validateCartAgainstMenu(false)
+    renderMenu()
+}
+
+function renderMenu(){
+    renderCombos()
+
+    const selectedBranch = branchesCache.find(b => Number(b.id) === Number(branchId))
+    const selectedBranchClosed = selectedBranch && Number(selectedBranch.closed) === 1
+
+    const q = searchInput.value.trim().toLowerCase()
+    const special = menuCache.find(item => item.is_special === 1)
+    let regular = menuCache.filter(item => item.is_special !== 1)
+
+    if(q){
+        regular = regular.filter(item =>
+            String(item.name || '').toLowerCase().includes(q) ||
+            String(item.description || '').toLowerCase().includes(q)
+        )
+    }
+
+    if(category === 'special'){
+        regular = special ? [special] : []
+        specialBox.innerHTML = ''
+    }else if(category === 'combo'){
+        regular = []
+        specialBox.innerHTML = ''
+    }else{
+        if(special && category === 'all'){
+            const price = special.discount_price || special.price
+            const qty = getSelectedQuantity(special)
+            specialBox.innerHTML = `
+                <div class="hero-card">
+                    <h2>🔥 Блюдо дня</h2>
+                    <div class="food-card ${selectedBranchClosed?'closed-food':''}" style="box-shadow:none">
+                        ${selectedBranchClosed?'<div class="closed-branch-lock">🔒</div>':''}
+                        ${imageOrIcon(special)}
+                        <h3>${special.name || 'Блюдо дня'}</h3>
+                        <p>${special.description || ''}</p>
+                        <div class="meta-row"><span>${ratingText(special)}</span><span class="stock ${qty<=0?'zero':''}">Осталось: ${qty}</span></div>
+                        ${priceHtml(special, price)}
+                        <button ${(qty<=0 || selectedBranchClosed)?'disabled':''} onclick='addToCart(${special.id}, ${JSON.stringify(special.name)}, ${price}, ${JSON.stringify(special.icon || '🥪')}, ${qty})'>Заказать</button>
+                    </div>
+                </div>
+            `
+        }else{
+            specialBox.innerHTML = ''
+        }
+    }
+
+    const closedWarning = selectedBranchClosed
+        ? `<div class="closed-branch-warning">🔒 ${selectedBranch.name} закрыт${selectedBranch.closed_reason ? ': ' + selectedBranch.closed_reason : ''}. Заказ в этом буфете недоступен.</div>`
+        : ''
+
+    const html = closedWarning + regular.map(item => {
+        const qty = getSelectedQuantity(item)
+        return `
+            <div class="food-card ${selectedBranchClosed?'closed-food':''}">
+                ${selectedBranchClosed?'<div class="closed-branch-lock">🔒</div>':''}
+                ${imageOrIcon(item)}
+                <h3>${item.icon || ''} ${item.name || 'Без названия'}</h3>
+                <p>${item.description || ''}</p>
+                <div class="meta-row">
+                    <span>${ratingText(item)}</span>
+                    <span class="stock ${qty<=0?'zero':''}">${selectedBranchClosed?'Буфет закрыт':(qty>0?'Осталось: '+qty:'Нет в буфете')}</span>
+                </div>
+                ${priceHtml(item, item.price)}
+                <button ${(qty<=0 || selectedBranchClosed)?'disabled':''} onclick='addToCart(${item.id}, ${JSON.stringify(item.name)}, ${item.price}, ${JSON.stringify(item.icon || '🥪')}, ${qty})'>Заказать</button>
+            </div>
+        `
+    }).join('') || '<div class="empty">Ничего не найдено</div>'
+
+    menu.innerHTML = html
+    menuMobile.innerHTML = html
+}
+
+function cartKey(item){
+    return item.is_combo ? ('combo_' + item.combo_id) : ('item_' + item.id)
+}
+
+function findCartItemByKey(key){
+    return cart.find(item => cartKey(item) === String(key))
+}
+
+function addComboToCart(id,name,price,icon){
+    const selectedBranch = branchesCache.find(b => Number(b.id) === Number(branchId))
+
+    if(selectedBranch && Number(selectedBranch.closed) === 1){
+        showPopup('Этот буфет закрыт. Выберите другой буфет.')
+        return
+    }
+
+    const existing = cart.find(x => x.is_combo && Number(x.combo_id) === Number(id))
+
+    if(existing){
+        existing.quantity += 1
+    }else{
+        cart.push({
+            combo_id:Number(id),
+            name:name,
+            price:Number(price),
+            icon:icon || '🍱',
+            quantity:1,
+            is_combo:true
+        })
+    }
+
+    renderCart()
+    reserveCart()
+}
+
+
+function addToCart(id,name,price,icon,available){
+    const selectedBranch = branchesCache.find(b => Number(b.id) === Number(branchId))
+
+    if(selectedBranch && Number(selectedBranch.closed) === 1){
+        showPopup('Этот буфет закрыт. Выберите другой буфет.')
+        return
+    }
+
+    const currentAvailable = getAvailableFromCache(id) || available
+    const existing = cart.find(item => item.id === id)
+
+    if(existing){
+        if(existing.quantity >= currentAvailable){ showPopup('Больше нет доступного количества'); return }
+        existing.quantity++
+    }else{
+        if(currentAvailable <= 0){ showPopup('Эта позиция закончилась'); return }
+        cart.push({id,name,price,icon,quantity:1,available:currentAvailable})
+    }
+
+    renderCart()
+    reserveCart()
+}
+
+function removeFromCart(key){
+    const item = findCartItemByKey(String(key))
+
+    if(!item) return
+
+    item.quantity--
+
+    if(item.quantity <= 0){
+        cart = cart.filter(x => cartKey(x) !== String(key))
+    }
+
+    renderCart()
+    reserveCart()
+}
+
+function deleteFromCart(key){
+    cart = cart.filter(x => cartKey(x) !== String(key))
+    renderCart()
+    reserveCart()
+}
+
+function increaseCartItem(key){
+    const item = findCartItemByKey(String(key))
+
+    if(!item) return
+
+    if(item.is_combo){
+        item.quantity++
+        renderCart()
+        reserveCart()
+        return
+    }
+
+    addToCart(item.id, item.name, item.price, item.icon, item.available)
+}
+
+
+function validateCartAgainstMenu(showAlert=true){
+    let changed = false
+    cart = cart.filter(item => {
+        if(item.is_combo) return true
+
+        const available = getAvailableFromCache(item.id)
+        if(available <= 0){ changed = true; return false }
+        if(item.quantity > available){ item.quantity = available; changed = true }
+        return true
+    })
+    if(changed && showAlert) showPopup('Корзина обновлена по актуальным остаткам')
+    renderCart()
+    return cart.length > 0
+}
+
+function renderCart(){
+    const cartBox = document.getElementById('cart')
+    const totalBox = document.getElementById('total')
+    const submitButton = document.getElementById('submitBtn')
+
+    let sum = 0
+    const count = cart.reduce((s,item) => s + Number(item.quantity || 0), 0)
+
+    // Не дублируем позиции: всё управление теперь в блоке «Проверка заказа».
+    if(cartBox){
+        cartBox.innerHTML = ''
+    }
+
+    if(typeof cartDetails !== 'undefined'){
+        if(cart.length){
+            cartDetails.style.display = 'block'
+            cartDetails.innerHTML = `
+                <h3 style="margin-top:0">Проверка заказа</h3>
+                ${cart.map(item => {
+                    const key = cartKey(item)
+                    const line = Number(item.price) * Number(item.quantity)
+                    sum += line
+
+                    return `
+                        <div class="cart-summary-line">
+                            <span>${item.icon} ${item.name}</span>
+                            <span>
+                                <button type="button" onclick="removeFromCart('${key}')">−</button>
+                                <b>${item.quantity}</b>
+                                <button type="button" onclick="increaseCartItem('${key}')">+</button>
+                                <button type="button" style="background:var(--red)" onclick="deleteFromCart('${key}')">Удалить</button>
+                            </span>
+                            <b>${line} ₽</b>
+                        </div>
+                    `
+                }).join('')}
+                <div class="cart-summary-line">
+                    <span><b>Итого</b></span>
+                    <b>${sum} ₽</b>
+                </div>
+            `
+        }else{
+            cartDetails.style.display = 'none'
+            cartDetails.innerHTML = '<div class="empty">Корзина пуста</div>'
+        }
+    }
+
+    if(totalBox){
+        totalBox.innerText = sum
+    }
+
+    if(submitButton){
+        submitButton.disabled = cart.length === 0
+    }
+
+    if(typeof cartBadge !== 'undefined'){
+        cartBadge.textContent = count
+
+        if(count > 0){
+            cartBadge.classList.add('show')
+        }else{
+            cartBadge.classList.remove('show')
+        }
+    }
+
+    if(typeof cartBadgeDesktop !== 'undefined'){
+        cartBadgeDesktop.textContent = count
+
+        if(count > 0){
+            cartBadgeDesktop.classList.add('show')
+        }else{
+            cartBadgeDesktop.classList.remove('show')
+        }
+    }
+}
+
+
+function renderReserveTimer(){
+    if(!reserveExpiresAt){ reserveInfo.innerHTML = ''; return }
+    const end = new Date(reserveExpiresAt.replace(' ', 'T'))
+    const diff = end - new Date()
+    if(diff <= 0){ reserveInfo.innerHTML = 'Бронь корзины истекла'; reserveExpiresAt = null; return }
+    const sec = Math.floor(diff / 1000)
+    reserveInfo.innerHTML = `Бронь корзины: ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2,'0')}`
+}
+
+async function reserveCart(){
+    if(cart.length === 0){
+        reserveExpiresAt = null
+        renderReserveTimer()
+        await fetch('/api/cart-clear', {method:'POST'})
+        return
+    }
+
+    const res = await fetch('/api/cart-reserve', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({branch_id:branchId, items:cart})
+    })
+    const data = await res.json()
+    if(data.error){ showPopup(data.error); await loadMenu(); return }
+    reserveExpiresAt = data.expires_at
+    renderReserveTimer()
+    if(!reserveTimer) reserveTimer = setInterval(renderReserveTimer,1000)
+}
+
+async function ensureAuthorized(){
+    if(currentUser) return true
+
+    const restored = await autoLoginBySavedPhone()
+
+    if(restored) return true
+
+    try{
+        const res = await fetch('/api/me', {credentials:'same-origin'})
+        if(res.ok){
+            currentUser = await res.json()
+            userBox.innerHTML = `👤 ${currentUser.name}`
+            profileName.innerHTML = currentUser.name + '<br><small>' + currentUser.phone + '</small>'
+            loginBtn.style.display = 'none'
+            logoutBtn.style.display = 'block'
+
+            if(typeof loginBtnDesktop !== 'undefined'){
+                loginBtnDesktop.style.display = 'none'
+                logoutBtnDesktop.style.display = 'block'
+            }
+
+            return true
+        }
+    }catch(e){}
+
+    return false
+}
+
+async function submitOrder(){
+    try{
+        if(selectedBranchIsClosed()){
+            showPopup(selectedBranchClosedMessage())
+            return
+        }
+
+        if(cart.length === 0){
+            showPopup('Корзина пуста')
+            return
+        }
+
+        if(!validatePickupTime()) return
+
+        await loadMenu()
+
+        if(selectedBranchIsClosed()){
+            showPopup(selectedBranchClosedMessage())
+            return
+        }
+
+        if(!validateCartAgainstMenu()) return
+
+        if(!await ensureAuthorized()){
+            showScreen('profile', document.querySelectorAll('.nav-btn')[4])
+            showPopup('Сначала войдите по номеру телефона')
+            return
+        }
+
+        let res = await fetch('/api/orders',{credentials:'same-origin',
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({branch_id:branchId, items:cart, pickup_time:pickupTime.value || null})
+        })
+
+        if(res.status === 401){
+            const ok = await autoLoginBySavedPhone()
+
+            if(ok){
+                res = await fetch('/api/orders',{credentials:'same-origin',
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({branch_id:branchId, items:cart, pickup_time:pickupTime.value || null})
+                })
+            }
+        }
+
+        let data = {}
+
+        try{
+            data = await res.json()
+        }catch(e){
+            showPopup('Ошибка сервера')
+            return
+        }
+
+        if(!res.ok || data.error){
+            showPopup(data.error || 'Не удалось оформить заказ')
+            loadMenu()
+            return
+        }
+
+        showPopup('Заказ №' + data.order_id + ' принят')
+        addNotice('🆕 Заказ #' + data.order_id + ' принят')
+        cart = []
+        reserveExpiresAt = null
+        pickupTime.value = ''
+        renderCart()
+        renderReserveTimer()
+        loadOrders()
+        loadMenu()
+        showScreen('orders', document.querySelectorAll('.nav-btn')[2])
+    }catch(e){
+        console.error(e)
+        showPopup('Не удалось оформить заказ. Попробуйте обновить страницу или выбрать другой буфет.')
+    }
+}
+
+async function payOrder(orderId, button=null){
+    try{
+        if(button){
+            button.disabled = true
+            button.dataset.oldText = button.innerText
+            button.innerText = 'Открываем оплату...'
+        }
+
+        const res = await fetch('/api/payments/create', {credentials:'same-origin',
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({order_id:orderId})
+        })
+
+        let data = {}
+
+        try{
+            data = await res.json()
+        }catch(e){
+            showPopup('Сервер не вернул данные оплаты')
+            return
+        }
+
+        if(!res.ok || data.error){
+            showPopup(data.error || 'Не удалось создать оплату')
+            return
+        }
+
+        if(data.already_paid){
+            showPopup('Заказ уже оплачен')
+            loadOrders()
+            return
+        }
+
+        if(data.payment_url){
+            openPaymentPanel(orderId, data.payment_url, data.hold_expires_at || null)
+            await loadOrders()
+            return
+        }
+
+        showPopup('Платёж создан, но ссылка оплаты не получена')
+    }catch(e){
+        console.error(e)
+        showPopup('Ошибка запуска оплаты')
+    }finally{
+        if(button){
+            button.disabled = false
+            button.innerText = button.dataset.oldText || 'Оплатить онлайн'
+        }
+    }
+}
+
+async function cancelOrder(orderId){
+    if(!confirm('Отменить заказ?')) return
+    const res = await fetch('/api/orders/' + orderId + '/cancel',{method:'POST'})
+    const data = await res.json()
+    if(data.error){ showPopup(data.error); return }
+    loadOrders()
+}
+
+function openRatingModal(orderId){
+    ratingOrderId = orderId
+    ratingStarsValue = 0
+    ratingComment.value = ''
+    ratingCounter.innerText = '0 / 500'
+    ratingStars.innerHTML = [1,2,3,4,5].map(s => `<button type="button" aria-label="${s} из 5" onclick="selectRating(${s})">★</button>`).join('')
+    ratingModal.classList.add('open')
+}
+
+function selectRating(stars){
+    ratingStarsValue = stars
+    ratingStars.querySelectorAll('button').forEach((btn, index) => btn.classList.toggle('active', index < stars))
+}
+
+function closeRatingModal(){
+    ratingModal.classList.remove('open')
+    ratingOrderId = null
+    ratingStarsValue = 0
+}
+
+ratingComment.addEventListener('input', () => {
+    ratingCounter.innerText = `${ratingComment.value.length} / 500`
+})
+
+async function submitRating(){
+    if(!ratingOrderId) return
+    if(!ratingStarsValue){ showPopup('Поставьте оценку от 1 до 5'); return }
+
+    const res = await fetch('/api/orders/' + ratingOrderId + '/rate',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({stars:ratingStarsValue, comment:ratingComment.value.trim()})
+    })
+    const data = await res.json()
+    if(data.error){ showPopup(data.error); return }
+    closeRatingModal()
+    showPopup('Спасибо! Отзыв сохранён.')
+    loadOrders()
+}
+
+function formatExpire(expiresAt){
+    if(!expiresAt) return ''
+    const end = new Date(expiresAt.replace(' ', 'T'))
+    const diff = end - new Date()
+    if(diff <= 0) return '<div class="reserve">Время получения истекло</div>'
+    const min = Math.floor(diff/60000)
+    const text = `<div class="reserve">Осталось: ${Math.floor(min/60)} ч. ${min%60} мин.</div>`
+
+    if(diff <= 10 * 60 * 1000){
+        return text + '<div class="expire-warning-line">⚠️ Осталось меньше 10 минут, потом заказ будет отменён</div>'
+    }
+
+    return text
+}
+
+function paymentStatusText(order){
+    const status = order.payment_status || 'unpaid'
+    if(status === 'paid') return '✅ Оплачено'
+    if(status === 'pending') return '⏳ Ожидается оплата'
+    if(status === 'refunded') return '↩️ Оплата возвращена'
+    if(status === 'refund_required') return '⚠️ Нужна проверка возврата'
+    return '💳 Не оплачено'
+}
+
+async function checkPayment(orderId, button=null){
+    if(button){ button.disabled=true; button.innerText='Проверяем…' }
+    try{
+        const res = await fetch('/api/payments/status/' + orderId, {credentials:'same-origin'})
+        const data = await res.json()
+        if(!res.ok || data.error){ showPopup(data.error || 'Не удалось проверить оплату'); return }
+        await loadOrders()
+        if(data.payment_status === 'paid') showPopup('Оплата подтверждена')
+        else if(data.payment_status === 'refunded') showPopup('Платёж возвращён')
+        else if(data.payment_status === 'refund_required') showPopup('Платёж требует проверки администратором')
+        else showPopup('Платёж пока не подтверждён')
+    }finally{
+        if(button){ button.disabled=false; button.innerText='Проверить оплату' }
+    }
+}
+
+async function loadOrders(){
+    if(!currentUser){
+        const ok = await autoLoginBySavedPhone()
+
+        if(!ok){
+            orders.innerHTML = '<div class="empty">Войдите по тому же номеру телефона, что использовали при заказе</div>'
+            return
+        }
+    }
+
+    let res = await fetch('/api/my-orders', {credentials:'same-origin'})
+
+    if(res.status === 401){
+        const ok = await autoLoginBySavedPhone()
+
+        if(!ok){
+            orders.innerHTML = '<div class="empty">Сессия истекла. Войдите по номеру телефона.</div>'
+            return
+        }
+
+        res = await fetch('/api/my-orders', {credentials:'same-origin'})
+    }
+
+    if(!res.ok){
+        orders.innerHTML = '<div class="empty">Не удалось загрузить заказы</div>'
+        return
+    }
+
+    orderCache = await res.json()
+    renderOrders()
+}
+
+function renderQrCodes(){
+    document.querySelectorAll('.qr-box').forEach(box => {
+        const code = box.dataset.code
+
+        if(!code){
+            box.innerHTML = '<small>QR появится после генерации кода</small>'
+            return
+        }
+
+        box.innerHTML = ''
+
+        if(typeof QRCode === 'undefined'){
+            box.innerHTML = '<small>QR-библиотека не загрузилась<br>Используйте код ниже</small>'
+            return
+        }
+
+        new QRCode(box, {
+            text: code,
+            width: 150,
+            height: 150,
+            correctLevel: QRCode.CorrectLevel.M
+        })
+
+        box.onclick = () => {
+            box.classList.toggle('qr-big')
+        }
+    })
+}
+
+function renderOrders(){
+    orderCache.forEach(order => {
+        if(order.status === 'ready'){
+            notifyReady(order)
+            notifyExpiring(order)
+        }
+    })
+
+    if(!orderCache.length){
+        orders.innerHTML = '<div class="empty">Заказов пока нет</div>'
+        return
+    }
+
+    const active = orderCache.filter(order => ['new','cooking','ready'].includes(order.status))
+    const history = orderCache.filter(order => !['new','cooking','ready'].includes(order.status))
+
+    const activeHtml = active.length
+        ? `<div class="current-orders-title"><h3 style="margin:0">Сейчас</h3><span class="status">${active.length} активн.</span></div>` +
+          active.map((order,index) => renderOrderCard(order,index===0)).join('')
+        : '<div class="card"><b>Активных заказов нет.</b><div class="order-note">Новые заказы появятся здесь.</div></div>'
+
+    const historyHtml = history.length
+        ? `<h3 class="orders-history-title">История</h3>${history.map(order => renderOrderCard(order,false)).join('')}`
+        : ''
+
+    orders.innerHTML = activeHtml + historyHtml
+    renderQrCodes()
+    updatePaymentCountdowns()
+}
+
+let paymentAutoCheckBusy = false
+async function autoReconcilePendingPayments(){
+    if(paymentAutoCheckBusy || !currentUser) return
+    const pending = orderCache.filter(o => o.payment_status === 'pending').slice(0,2)
+    if(!pending.length) return
+    paymentAutoCheckBusy = true
+    try{
+        for(const order of pending){
+            try{ await fetch('/api/payments/status/' + order.id, {credentials:'same-origin'}) }catch(e){}
+        }
+        await loadOrders()
+    }finally{
+        paymentAutoCheckBusy = false
+    }
+}
+
+function restoreSoundUnlock(){
+    try{
+        if(localStorage.getItem('vgmu_sound_unlocked') === '1'){
+            const resume = () => {
+                unlockSound()
+                document.removeEventListener('click', resume)
+                document.removeEventListener('touchstart', resume)
+            }
+
+            document.addEventListener('click', resume)
+            document.addEventListener('touchstart', resume)
+        }
+    }catch(e){}
+}
+
+setInterval(() => {
+    updatePaymentCountdowns()
+}, 1000)
+
+;(async () => {
+    restoreSoundUnlock()
+    updateOnlineState()
+
+    await loadBranches()
+    await loadSchedule()
+    await restore()
+
+    if(!currentUser){
+        await autoLoginBySavedPhone()
+    }
+
+    await loadMenu()
+    await loadCombos()
+    renderCart()
+    updatePickupLimits()
+})()
+
+// Core stays usable even when an external CDN is temporarily unavailable.
+setInterval(() => {
+    loadMenu().catch(() => {})
+    if(currentUser) loadOrders().catch(() => {})
+}, 15000)
+setInterval(() => autoReconcilePendingPayments().catch(() => {}), 30000)
+</script>
+</body>
+</html>

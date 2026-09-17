@@ -1,0 +1,8 @@
+canteen.db
+.secret_key
+local_payment_config.json
+backups/
+__pycache__/
+*.pyc
+
+.env

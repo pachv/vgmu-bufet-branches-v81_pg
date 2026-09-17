@@ -1,0 +1,14 @@
+Default food photos bundled in v54 are from Wikimedia Commons/open sources and converted to WEBP 512x384 for the project.
+
+Files:
+- default_sandwich.webp: Wikimedia Commons, Sandwich and Sides (Unsplash), CC0.
+- default_coffee.webp: Wikimedia Commons, Coffee mugs cups, public domain / Jon Sullivan.
+- default_pizza.webp: Wikimedia Commons, Pizza (1), public domain / Scott Bauer, USDA.
+- default_salad.webp: Wikimedia Commons, Food salad, public domain / Leon Brooks.
+- default_burger.webp: Wikimedia Commons, Burger and a Salad (Unsplash), CC0.
+- default_tea.webp: Wikimedia Commons, Mug of Tea, public domain / Factorylad.
+- default_juice.webp: Wikimedia Commons, Orange juice 1 edit1, public domain / USDA ARS.
+- default_cake.webp: Wikimedia Commons, Pound layer cake, public domain / Scheinwerfermann.
+- default_pastry.webp: Wikimedia Commons, Pastries, CC BY-SA 2.0 source on Commons.
+
+For production it is still better to replace defaults with real photos from your own buffet.

@@ -1,0 +1,1875 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Админка</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+body{font-family:Segoe UI;background:#111827;color:white;margin:0}
+.header{background:#0f172a;padding:24px;text-align:center}
+.main{max-width:1600px;margin:30px auto;padding:0 20px}
+.panel,.login,.card,.form{background:#1f2937;border-radius:24px;padding:22px;margin-bottom:20px}
+input,select,textarea,button{padding:12px;border-radius:12px;border:0;margin:6px 0}
+input,select,textarea{width:100%}
+button{background:#10b981;color:white;font-weight:800;cursor:pointer}
+.tabs button{background:#374151;margin-right:10px}
+.tab{display:none}
+.active{display:block}
+.grid{display:grid;grid-template-columns:420px 1fr;gap:24px}
+.menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.hidden{opacity:.45}
+.danger{background:#dc2626}
+.blue{background:#2563eb}
+.edit{background:#f59e0b}
+.code{color:#fca5a5;font-size:24px;font-weight:900}
+.user-card{cursor:pointer;border:1px solid transparent}
+.user-card:hover{border-color:#10b981;background:#263244}
+.timer{color:#fca5a5;font-weight:900}
+.filters{display:grid;grid-template-columns:1fr 220px 220px;gap:10px}
+.modal{display:none;position:fixed;inset:0;background:#0009;align-items:center;justify-content:center;z-index:999}
+.modal-box{background:#1f2937;border-radius:24px;padding:24px;width:min(700px,95vw);max-height:90vh;overflow:auto}
+.log{font-size:14px;color:#d1d5db;border-top:1px solid #374151;margin-top:8px;padding-top:8px}
+@media(max-width:1200px){.grid,.menu-grid,.filters{grid-template-columns:1fr}}
+
+/* === V8 ADMIN DASHBOARD UI === */
+:root{--bg:#0b1220;--panel:#111827;--panel2:#1f2937;--line:#334155;--green:#10b981;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--purple:#7c3aed;--text:#f8fafc;--muted:#cbd5e1}
+body{background:radial-gradient(circle at 0% 0%,rgba(124,58,237,.22),transparent 28%),radial-gradient(circle at 100% 8%,rgba(16,185,129,.14),transparent 32%),var(--bg)!important;color:var(--text)}
+.header{background:linear-gradient(135deg,#0f172a,#111827 60%,#312e81)!important;border-bottom:1px solid rgba(255,255,255,.08);box-shadow:0 18px 60px rgba(0,0,0,.28)}
+.main{max-width:1700px!important}
+.login,.panel,.card,.form,.modal-box{background:rgba(17,24,39,.92)!important;border:1px solid rgba(255,255,255,.08);box-shadow:0 18px 50px rgba(0,0,0,.22);backdrop-filter:blur(12px)}
+.tabs{position:sticky;top:0;z-index:50;background:rgba(11,18,32,.78);backdrop-filter:blur(14px);padding:10px;border-radius:22px;margin-bottom:18px}
+.tabs button{background:#1f2937!important;border:1px solid rgba(255,255,255,.08);transition:.15s transform,.15s background}
+.tabs button:hover{transform:translateY(-1px);background:#334155!important}
+input,select,textarea{background:#0f172a!important;color:white!important;border:1px solid var(--line)!important}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)!important;box-shadow:0 0 0 4px rgba(16,185,129,.12)}
+.card{border-radius:22px!important}
+.panel{border-radius:28px!important}
+button{transition:.15s transform,.15s opacity}
+button:hover{transform:translateY(-1px)}
+.status-new{background:var(--blue)}.status-cooking{background:var(--orange)}.status-ready{background:var(--green)}.status-issued{background:#64748b}.status-expired,.status-canceled{background:var(--red)}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.kpi-card{background:linear-gradient(135deg,#1f2937,#0f172a);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:18px}
+.kpi-card b{font-size:28px;display:block;margin-top:8px}
+@media(max-width:1100px){.grid,.menu-grid,.filters,.kpi-grid{grid-template-columns:1fr!important}.tabs{position:static}.tabs button{margin-bottom:8px}}
+
+
+/* V70_ANALYTICS */
+.analytics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.analytics-grid .card{margin:0}
+.metric-note{color:var(--muted);font-size:13px;margin-top:5px}.bar-list{display:grid;gap:10px;margin-top:12px}.bar-row{display:grid;grid-template-columns:minmax(120px,1fr) 2fr auto;gap:10px;align-items:center}.bar-track{height:10px;background:#0f172a;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}.bar-fill{height:100%;background:linear-gradient(90deg,#10b981,#22c55e);border-radius:999px}.bar-fill.blue{background:linear-gradient(90deg,#2563eb,#60a5fa)}.bar-fill.orange{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.feedback-row{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)}.feedback-row:last-child{border-bottom:0}.stars{color:#fbbf24;font-weight:900}.muted{color:var(--muted)}
+@media(max-width:900px){.analytics-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr}.bar-track{height:8px}}
+
+/* V10_ADMIN_FIXES */
+.menu-grid{align-items:stretch}
+.menu-grid .card{display:flex;flex-direction:column}
+.menu-grid .card .menu-actions{margin-top:auto;display:flex;flex-wrap:wrap;gap:8px}
+.schedule-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.schedule-tile{background:#0f172a;border:1px solid var(--line);border-radius:18px;padding:12px}
+.schedule-row{display:grid;grid-template-columns:42px 1fr 1fr 28px;gap:6px;align-items:center;margin:6px 0}
+.combo-pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:10px 0}
+.combo-pick{background:#0f172a;border:1px solid var(--line);border-radius:16px;padding:10px;cursor:pointer;min-height:108px}
+.combo-pick.active{border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)}
+.combo-pick .ico{font-size:32px}
+.combo-pick input{width:70px;margin-top:6px}
+
+/* V12_STATS */
+.stat-table{width:100%;border-collapse:collapse;margin-top:10px}
+.stat-table th,.stat-table td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);text-align:left}
+
+/* V15_SAAS_ADMIN_UI */
+body{background:#0b1220!important}
+.main{max-width:1800px!important}
+#adminPanel{display:grid;grid-template-columns:260px 1fr;gap:20px}
+.tabs{position:sticky!important;top:18px!important;align-self:start;background:#111827!important;border:1px solid rgba(255,255,255,.08);border-radius:28px!important;padding:14px!important;display:flex!important;flex-direction:column!important;gap:8px}
+.tabs button{width:100%;text-align:left;border-radius:18px!important;padding:14px 16px!important;background:#1f2937!important;color:#f8fafc!important}
+.tab.active{animation:fadeIn .18s ease}
+@keyframes fadeIn{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:none}}
+.panel{border-radius:30px!important}
+.card{border-radius:24px!important}
+.filters{background:#0f172a;border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:12px}
+.kpi-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))!important}
+.kpi-card{min-height:120px}
+.menu-grid{grid-template-columns:repeat(auto-fill,minmax(330px,1fr))!important}
+@media(max-width:1050px){
+    #adminPanel{display:block}
+    .tabs{position:static!important;display:grid!important;grid-template-columns:repeat(2,1fr)!important}
+}
+@media(max-width:650px){
+    .tabs{grid-template-columns:1fr!important}
+}
+
+/* V16_DESKTOP_SIDEBAR_FIX */
+@media(min-width:901px){
+    #adminPanel{
+        display:grid;
+        grid-template-columns:260px minmax(0,1fr);
+        gap:22px;
+        align-items:start;
+    }
+    #adminPanel[style*="display: block"]{
+        display:grid!important;
+    }
+    .tabs{
+        position:sticky!important;
+        top:18px!important;
+        display:flex!important;
+        flex-direction:column!important;
+        width:260px!important;
+        min-width:260px!important;
+        max-width:260px!important;
+        height:auto!important;
+    }
+    .tabs button{
+        width:100%!important;
+        display:block!important;
+        text-align:left!important;
+    }
+    .tab{
+        min-width:0;
+    }
+}
+@media(max-width:900px){
+    #adminPanel{
+        display:block!important;
+    }
+}
+
+/* V24_LOGIN_MOBILE */
+@media(max-width:700px){
+    body{min-height:100vh}
+    .login{
+        width:calc(100vw - 28px)!important;
+        margin:20px auto!important;
+        padding:22px!important;
+        border-radius:28px!important;
+    }
+    .login h1{font-size:28px;text-align:center}
+    .login input,.login button{font-size:18px!important;padding:16px!important;border-radius:18px!important;width:100%!important}
+}
+
+/* V26_ADMIN_MOBILE_ONLY_PATCH */
+/* ПК-версия выше 900px НЕ трогается. */
+@media(max-width:900px){
+    html, body{
+        min-height:100%;
+        overflow-x:hidden;
+    }
+
+    body{
+        padding:0!important;
+    }
+
+    .header{
+        padding:18px 14px!important;
+        text-align:center!important;
+    }
+
+    .header h1{
+        font-size:26px!important;
+        line-height:1.15!important;
+        margin:0!important;
+    }
+
+    .main{
+        padding:12px!important;
+        max-width:100%!important;
+    }
+
+    .login{
+        width:calc(100vw - 24px)!important;
+        max-width:460px!important;
+        margin:24px auto!important;
+        padding:22px!important;
+        border-radius:26px!important;
+        box-sizing:border-box!important;
+    }
+
+    .login h1{
+        font-size:28px!important;
+        text-align:center!important;
+        margin-top:0!important;
+    }
+
+    .login input,
+    .login button{
+        width:100%!important;
+        box-sizing:border-box!important;
+        font-size:17px!important;
+        padding:15px!important;
+        border-radius:16px!important;
+    }
+
+    #adminPanel{
+        display:block!important;
+    }
+
+    .tabs{
+        position:static!important;
+        width:100%!important;
+        max-width:none!important;
+        min-width:0!important;
+        display:grid!important;
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
+        gap:8px!important;
+        margin-bottom:14px!important;
+        padding:10px!important;
+        border-radius:20px!important;
+        overflow:visible!important;
+    }
+
+    .tabs button{
+        width:100%!important;
+        text-align:center!important;
+        font-size:14px!important;
+        padding:12px 8px!important;
+        border-radius:14px!important;
+        white-space:normal!important;
+    }
+
+    .panel,
+    .card,
+    .form{
+        border-radius:20px!important;
+        padding:14px!important;
+    }
+
+    .grid,
+    .menu-grid,
+    .filters,
+    .kpi-grid,
+    .schedule-grid,
+    .combo-pick-grid{
+        grid-template-columns:1fr!important;
+    }
+
+    input,
+    select,
+    textarea,
+    button{
+        max-width:100%!important;
+        box-sizing:border-box!important;
+    }
+
+    table{
+        display:block!important;
+        max-width:100%!important;
+        overflow-x:auto!important;
+        white-space:nowrap!important;
+    }
+}
+
+@media(orientation:landscape) and (max-height:650px) and (max-width:1100px){
+    .login{
+        max-width:720px!important;
+        margin:12px auto!important;
+    }
+
+    .tabs{
+        grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    }
+}
+
+
+/* V27_BRANCH_CLOSE_ADMIN */
+.branch-close-card{
+    background:#0f172a;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:18px;
+    padding:12px;
+    margin-bottom:10px;
+}
+.branch-close-row{
+    display:grid;
+    grid-template-columns:1fr 160px 2fr 160px;
+    gap:8px;
+    align-items:center;
+}
+.branch-state-open{color:#22c55e;font-weight:900}
+.branch-state-closed{color:#f87171;font-weight:900}
+@media(max-width:900px){
+    .branch-close-row{grid-template-columns:1fr}
+}
+
+/* V31_OPERATORS_BRANCHES */
+.operator-card{
+    background:#0f172a;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:18px;
+    padding:14px;
+    margin-bottom:12px;
+}
+.operator-row{
+    display:grid;
+    grid-template-columns:1.2fr 1fr 1fr 140px 100px;
+    gap:8px;
+    align-items:center;
+}
+@media(max-width:900px){
+    .operator-row{grid-template-columns:1fr}
+}
+
+/* V49_COMBO_PICK_IMAGES */
+.combo-pick-img{
+    width:100%;
+    height:92px;
+    object-fit:cover;
+    border-radius:12px;
+    margin-bottom:8px;
+    display:block;
+    background:#111827;
+}
+.combo-pick-fallback{
+    height:92px;
+    border-radius:12px;
+    margin-bottom:8px;
+    align-items:center;
+    justify-content:center;
+    background:#1f2937;
+    color:#9ca3af;
+    font-weight:900;
+    font-size:13px;
+}
+
+/* V79_CONTROL_CENTER */
+.health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.health-card{padding:16px;border-radius:20px;background:#0f172a;border:1px solid rgba(255,255,255,.1)}
+.health-card b{display:block;font-size:24px;margin-top:6px}
+.health-good{color:#86efac}.health-warn{color:#fde68a}.health-bad{color:#fca5a5}
+.incident-card{border-left:5px solid #f59e0b}.incident-card.critical{border-left-color:#ef4444}
+.incident-meta{color:var(--muted);font-size:12px;margin-top:6px}
+@media(max-width:900px){.health-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.health-grid{grid-template-columns:1fr}}
+
+</style>
+</head>
+<body>
+<div class="header">
+    <h1>👑 АДМИНКА</h1>
+</div>
+
+<div class="main">
+    <div class="login">
+        <input id="password" type="password" placeholder="Пароль">
+
+        <button id="loginBtn" onclick="login()">Войти</button>
+        <button id="logoutBtn" style="display:none;background:#dc2626" onclick="logout()">Выйти</button>
+    </div>
+
+    <div id="adminPanel" style="display:none">
+        <div class="tabs">
+            <button onclick="show('dashboardTab')">📊 Дашборд</button>
+            <button onclick="show('ordersTab')">📦 Заказы</button>
+            <button onclick="show('usersTab')">👥 Пользователи</button>
+            <button onclick="show('menuTab')">🍔 Меню</button>
+            <button onclick="show('combosTab')">🍱 Комбо</button>
+            <button onclick="show('scheduleTab')">🏪 Буфеты</button>
+            <button onclick="show('operatorsTab')">🧑‍💼 Операторы</button>
+            <button onclick="show('paymentsTab')">💳 Оплата</button>
+            <button onclick="show('analyticsTab')">📊 Аналитика</button>
+            <button onclick="show('controlTab')">🛡️ Контроль</button>
+            <button onclick="show('logsTab')">🧾 Журнал</button>
+        </div>
+
+        <div id="dashboardTab" class="tab active">
+            <div class="panel">
+                <h2>📊 Дашборд руководителя</h2>
+                <div id="dashboardCards" class="kpi-grid"></div>
+                <div id="dashboardDetails"></div>
+            </div>
+        </div>
+
+        <div id="ordersTab" class="tab">
+            <div class="panel">
+                <h2>Все заказы</h2>
+
+                <div class="filters">
+                    <input id="orderSearch" placeholder="Поиск: номер заказа, телефон, пользователь" oninput="loadOrders()">
+
+                    <select id="orderStatus" onchange="loadOrders()">
+                        <option value="">Все статусы</option>
+                        <option value="new">Заказ принят</option>
+                        <option value="cooking">Готовится</option>
+                        <option value="ready">Готов к выдаче</option>
+                        <option value="issued">Выдан</option>
+                        <option value="expired">Истёк</option>
+                        <option value="canceled">Отменён</option>
+                    </select>
+
+                    <select id="orderBranch" onchange="loadOrders()">
+                        <option value="">Все буфеты</option>
+                    </select>
+                </div>
+
+                <div id="orders"></div>
+            </div>
+        </div>
+
+        <div id="usersTab" class="tab">
+            <div class="grid">
+                <div class="panel">
+                    <h2>Пользователи</h2>
+                    <input id="userSearch" placeholder="Поиск по имени или телефону" oninput="loadUsers()">
+                    <div id="users"></div>
+                </div>
+
+                <div class="panel">
+                    <h2>История</h2>
+                    <div id="userHistory">Выберите пользователя</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="menuTab" class="tab">
+            <div class="panel">
+                <h2>Добавить блюдо</h2>
+
+                <div class="form">
+                    <input id="name" placeholder="Название">
+                    <input id="price" type="number" placeholder="Цена">
+
+                    <textarea id="description" placeholder="Описание"></textarea>
+                    <input id="image" type="file">
+
+                    <label>
+                        <input id="special" type="checkbox">
+                        Блюдо дня
+                    </label>
+
+                    <input id="oldPrice" type="number" placeholder="Старая цена">
+                    <input id="discountPrice" type="number" placeholder="Цена со скидкой">
+
+                    <label>
+                        <input id="writeoffEnabled" type="checkbox">
+                        Добавить автосписание
+                    </label>
+
+                    <input id="writeoffHours" type="number" placeholder="Автосписание ежедневно в 20:00">
+
+                    <div id="stockInputs"></div>
+
+                    <button onclick="addItem()">Добавить</button>
+                </div>
+
+                <h2>Меню</h2>
+                <div class="menu-grid" id="menuList"></div>
+            </div>
+        </div>
+
+        <div id="combosTab" class="tab">
+            <div class="panel">
+                <h2>🍱 Комбо-наборы</h2>
+                <div class="form">
+                    <input id="comboName" placeholder="Название комбо">
+                    <input id="comboPrice" type="number" placeholder="Цена комбо">
+<textarea id="comboDescription" placeholder="Описание"></textarea>
+                    <input id="comboImage" type="file">
+                    <p>Выберите блюда для комбо:</p>
+                    <div id="comboMenuPicker" class="combo-pick-grid"></div>
+                    <button onclick="addCombo()">Добавить комбо</button>
+                </div>
+                <div id="comboList"></div>
+            </div>
+        </div>
+
+        <div id="scheduleTab" class="tab">
+            <div class="panel">
+                <h2>🏪 Буфеты и расписание</h2>
+
+                <div class="form">
+                    <h3>Добавить новый буфет</h3>
+                    <input id="newBranchName" placeholder="Например: Буфет на 3 этаже">
+                    <button onclick="addBranch()">Добавить буфет</button>
+                </div>
+
+                <h3>🔴 Быстро закрыть / открыть буфет</h3>
+                <div id="branchCloseList"></div>
+                <hr>
+                <div id="scheduleList"></div>
+            </div>
+        </div>
+
+        <div id="operatorsTab" class="tab">
+            <div class="panel">
+                <h2>🧑‍💼 Операторы</h2>
+
+                <div class="form">
+                    <h3>Добавить оператора</h3>
+                    <input id="operatorLogin" placeholder="Логин оператора">
+                    <input id="operatorPassword" placeholder="Пароль оператора">
+                    <select id="operatorBranch"></select>
+                    <button onclick="addOperator()">Добавить оператора</button>
+                </div>
+
+                <div id="operatorsList"></div>
+            </div>
+        </div>
+
+        <div id="paymentsTab" class="tab">
+            <div class="panel">
+                <h2>💳 Онлайн-оплата</h2>
+
+                <div class="form">
+                    <label>
+                        <input id="payEnabled" type="checkbox" onchange="renderPaymentProviderFields()">
+                        Использовать реальный платёжный шлюз
+                    </label>
+
+                    <label>Платёжная система</label>
+                    <select id="payProvider" onchange="renderPaymentProviderFields()">
+                        <option value="demo">Demo — без реальных денег</option>
+                        <option value="yookassa">ЮKassa</option>
+                        <option value="sber">Сбер</option>
+                    </select>
+
+                    <div id="yookassaFields" class="card">
+                        <h3>ЮKassa</h3>
+                        <input id="payYooShopId" placeholder="Shop ID тестового или боевого магазина">
+                        <input id="payYooSecret" type="password" placeholder="Secret Key">
+                        <input id="payYooApiUrl" placeholder="API URL" value="https://api.yookassa.ru/v3">
+                        <label style="display:flex;align-items:center;gap:8px"><input id="payYooTestMode" type="checkbox" style="width:auto"> Тестовый магазин ЮKassa</label>
+                        <label>Способ оплаты</label>
+                        <select id="payYooMethod">
+                            <option value="auto">Платёжная страница ЮKassa — доступные способы</option>
+                            <option value="bank_card">Только банковская карта</option>
+                            <option value="yoo_money">Только ЮMoney</option>
+                            <option value="sbp">СБП / QR (для боевого магазина)</option>
+                        </select>
+                        <div class="card" style="background:#f8fafc">
+                            В тестовом магазине ЮKassa используйте тестовый Shop ID и Secret Key.
+                            Тестовая среда определяется самими ключами — отдельного API URL не требуется.<br>
+                            Для webhook нужен публично доступный HTTPS-адрес. Для локального теста программа также умеет проверить статус через API после возврата со страницы оплаты.
+                        </div>
+                    </div>
+
+                    <div id="sberFields" class="card">
+                        <h3>Сбер</h3>
+                        <input id="payApiUrl" placeholder="Боевой API URL Сбера">
+                        <input id="payTestApiUrl" placeholder="Тестовый API URL Сбера">
+                        <input id="payUsername" placeholder="API логин">
+                        <input id="payPassword" type="password" placeholder="API пароль">
+                        <input id="payFailUrl" placeholder="Fail URL">
+                    </div>
+
+                    <label>Return URL</label>
+                    <input id="payReturnUrl" placeholder="Можно оставить пустым — программа сформирует /payment-result автоматически">
+                    <label>Webhook / Callback URL</label>
+                    <input id="payCallbackUrl" placeholder="Для ЮKassa: https://ваш-домен/api/payments/yookassa/webhook">
+                    <input id="payDemoUrl" placeholder="Demo URL — обычно оставьте пустым">
+
+                    <label>Бронь товара при начатой оплате, минут</label>
+                    <input id="payHoldMinutes" type="number" min="3" max="60" value="10">
+
+                    <label><input id="payFiscalEnabled" type="checkbox"> Фискализация через банк/кассу включена</label>
+                    <label><input id="payOnecEnabled" type="checkbox"> Обмен с 1С включён</label>
+                    <input id="payOnecUrl" placeholder="URL HTTP-сервиса 1С">
+                    <input id="payOnecToken" type="password" placeholder="Токен 1С / оставить пустым, чтобы не менять">
+
+                    <div id="payHint" class="card">
+                        Если реальный шлюз выключен — работает встроенный demo-режим. Для ЮKassa сначала можно подключить тестовый магазин.
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap">
+                        <button onclick="savePaymentSettings()">Сохранить</button>
+                        <button onclick="testPaymentSettings()" style="background:#0f766e">Проверить подключение</button>
+                    </div>
+                    <div id="payConnectionStatus" class="card" style="display:none"></div>
+                </div>
+
+                <h3>Последние платежи</h3>
+                <div id="paymentsLog"></div>
+            </div>
+        </div>
+
+        <div id="analyticsTab" class="tab">
+            <div class="panel">
+                <h2>📊 Аналитика</h2>
+                <div id="analytics"></div>
+            </div>
+        </div>
+
+        <div id="controlTab" class="tab">
+            <div class="panel">
+                <h2>🛡️ Контроль системы</h2>
+                <p class="muted">Здесь только то, что требует внимания: состояние сервера, платежи, резервные копии и противоречия данных.</p>
+                <div id="healthCards" class="health-grid"></div>
+                <h3>Требует внимания</h3>
+                <div id="incidentsList"></div>
+                <h3>Последние действия</h3>
+                <div id="auditList"></div>
+            </div>
+        </div>
+
+        <div id="logsTab" class="tab">
+            <div class="panel">
+                <h2>Журнал действий</h2>
+                <div id="logs"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="editModal">
+    <div class="modal-box">
+        <h2>Редактировать позицию меню</h2>
+
+        <input type="hidden" id="editId">
+        <input id="editName" placeholder="Название">
+        <input id="editPrice" type="number" placeholder="Цена">
+
+        <textarea id="editDescription" placeholder="Описание"></textarea>
+
+        <label>
+            <input id="editAvailable" type="checkbox">
+            Показывать в меню
+        </label><br>
+
+        <label>
+            <input id="editSpecial" type="checkbox">
+            Блюдо дня
+        </label>
+
+        <input id="editOldPrice" type="number" placeholder="Старая цена">
+        <input id="editDiscountPrice" type="number" placeholder="Цена со скидкой">
+
+        <label>
+            <input id="editWriteoffEnabled" type="checkbox">
+            Добавить автосписание
+        </label>
+
+        <input id="editWriteoffHours" type="number" placeholder="Автосписание ежедневно в 20:00">
+
+        <h3>Остатки по буфетам</h3>
+        <div id="editStock"></div>
+
+        <button onclick="saveEdit()">Сохранить</button>
+        <button class="danger" onclick="closeEdit()">Закрыть</button>
+    </div>
+</div>
+
+<script>
+const socket = (typeof io === 'function') ? io() : {on(){}, emit(){}}
+
+const st = {
+    new:'🆕 Заказ принят',
+    cooking:'👨‍🍳 Готовится',
+    ready:'📦 Готов к выдаче',
+    issued:'✅ Выдан',
+    expired:'⌛ Время получения истекло',
+    canceled:'❌ Отменён'
+}
+
+let branches = []
+let currentEditItem = null
+
+socket.on('update', () => {
+    if(adminPanel.style.display !== 'none') loadAll()
+})
+
+function show(id){
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active')
+    })
+
+    const target = document.getElementById(id)
+    if(!target) return
+    target.classList.add('active')
+
+    if(id === 'logsTab') loadLogs()
+    if(id === 'analyticsTab') loadAnalytics()
+    if(id === 'dashboardTab') loadDashboard()
+    if(id === 'combosTab') loadCombos()
+    if(id === 'scheduleTab') loadSchedule()
+    if(id === 'operatorsTab') loadOperators()
+    if(id === 'paymentsTab') loadPaymentSettings()
+    if(id === 'controlTab') loadControlCenter()
+}
+
+function safeText(text){
+    return String(text || '')
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'","&#039;")
+}
+
+function formatExpire(expiresAt){
+    if(!expiresAt) return ''
+
+    const end = new Date(expiresAt.replace(' ', 'T'))
+    const diff = end - new Date()
+
+    if(diff <= 0) return '<div class="timer">Время истекло</div>'
+
+    const min = Math.floor(diff / 60000)
+    const h = Math.floor(min / 60)
+    const m = min % 60
+
+    return `<div class="timer">Забрать до: ${expiresAt}<br>Осталось: ${h} ч. ${m} мин.</div>`
+}
+
+async function login(){
+    const res = await fetch('/api/admin/login', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({password:password.value})
+    })
+
+    const data = await res.json()
+
+    if(!data.success){
+        alert('Неверный пароль')
+        return
+    }
+
+    adminPanel.style.display = 'grid'
+    loginBtn.style.display = 'none'
+    logoutBtn.style.display = 'inline-block'
+
+    loadAll()
+}
+
+async function logout(){
+    await fetch('/api/admin/logout', {method:'POST'})
+    location.reload()
+}
+
+async function loadBranches(){
+    const res = await fetch('/api/branches')
+    branches = await res.json()
+
+    stockInputs.innerHTML = branches.map(branch => `
+        <input
+            id="q_${branch.id}"
+            type="number"
+            placeholder="Количество: ${branch.name}"
+        >
+    `).join('')
+
+    orderBranch.innerHTML = '<option value="">Все буфеты</option>' + branches.map(branch => `
+        <option value="${branch.id}">${branch.name}</option>
+    `).join('')
+
+    if(typeof operatorBranch !== 'undefined'){
+        operatorBranch.innerHTML = branches.map(branch => `
+            <option value="${branch.id}">${safeText(branch.name)}</option>
+        `).join('')
+    }
+}
+
+async function loadAll(){
+    loadOrders()
+    loadDashboard()
+    loadUsers()
+    loadMenu()
+    loadCombos()
+    loadSchedule()
+    loadOperators()
+    loadPayments()
+    loadLogs()
+}
+
+async function loadOrders(){
+    const params = new URLSearchParams()
+    if(orderSearch.value) params.set('search', orderSearch.value)
+    if(orderStatus.value) params.set('status', orderStatus.value)
+    if(orderBranch.value) params.set('branch_id', orderBranch.value)
+
+    const res = await fetch('/api/admin/orders?' + params.toString())
+
+    if(!res.ok) return
+
+    const data = await res.json()
+
+    orders.innerHTML = data.map(order => `
+        <div class="card">
+            <b>Заказ #${order.id}</b><br>
+            🏪 ${safeText(order.branch_name)}<br>
+            👤 ${safeText(order.name)}<br>
+            📱 ${safeText(order.phone)}<br>
+            💰 ${order.total} ₽<br>
+            ${st[order.status] || safeText(order.status)}<br>
+
+            ${order.pickup_code ? `<div class="code">🔢 ${order.pickup_code}</div>` : ''}
+            ${order.status === 'ready' ? formatExpire(order.expires_at) : ''}
+            ${order.issued_at ? `📅 Выдан: ${order.issued_at}<br>` : ''}
+            ${order.rated ? `<div style="margin-top:8px;padding:10px;border-radius:14px;background:#0f172a;border:1px solid rgba(255,255,255,.12)">⭐ Оценка: ${order.rating_stars || '—'}<br>💬 Комментарий: ${safeText(order.rating_comment || 'без комментария')}</div>` : ''}
+            ${order.expired_at ? `⌛ Истёк: ${order.expired_at}<br>` : ''}
+            ${order.canceled_at ? `❌ Отменён: ${order.canceled_at}<br>` : ''}
+
+            <hr>
+
+            ${order.items.map(item => `
+                ${safeText(item.icon)} ${safeText(item.name)} x${item.quantity}
+            `).join('<br>')}
+        </div>
+    `).join('')
+}
+
+async function loadUsers(){
+    const params = new URLSearchParams()
+    if(userSearch.value) params.set('search', userSearch.value)
+
+    const res = await fetch('/api/admin/users?' + params.toString())
+
+    if(!res.ok) return
+
+    const data = await res.json()
+
+    users.innerHTML = data.map(user => `
+        <div
+            class="card user-card"
+            data-user-id="${user.id}"
+            data-user-name="${safeText(user.name)}"
+        >
+            👤 ${safeText(user.name)}<br>
+            📱 ${safeText(user.phone)}<br>
+            Заказов: ${user.orders_count}<br>
+            Потрачено: ${user.total_spent} ₽
+        </div>
+    `).join('')
+
+    document.querySelectorAll('.user-card').forEach(card => {
+        card.addEventListener('click', () => {
+            userHistory(card.dataset.userId, card.dataset.userName)
+        })
+    })
+}
+
+async function userHistory(id, name){
+    userHistoryBox(`<h3>${safeText(name)}</h3><p>Загружаю историю...</p>`)
+
+    const res = await fetch('/api/admin/users/' + id + '/orders')
+
+    if(!res.ok){
+        const text = await res.text()
+        userHistoryBox(`<h3>${safeText(name)}</h3><p style="color:#fca5a5">Ошибка загрузки истории: ${safeText(text)}</p>`)
+        return
+    }
+
+    const data = await res.json()
+
+    userHistoryBox(`
+        <h3>${safeText(name)}</h3>
+        ${
+            data.length
+            ? data.map(order => `
+                <div class="card">
+                    <b>Заказ #${order.id}</b><br>
+                    🏪 ${safeText(order.branch_name || '')}<br>
+                    ${st[order.status] || safeText(order.status)}<br>
+                    💰 ${order.total} ₽<br>
+                    ${order.pickup_code ? `🔢 ${order.pickup_code}<br>` : ''}
+                    ${order.status === 'ready' ? formatExpire(order.expires_at) : ''}
+                    ${order.issued_at ? `📅 Выдан: ${order.issued_at}<br>` : ''}
+            ${order.rated ? `<div style="margin-top:8px;padding:10px;border-radius:14px;background:#0f172a;border:1px solid rgba(255,255,255,.12)">⭐ Оценка: ${order.rating_stars || '—'}<br>💬 Комментарий: ${safeText(order.rating_comment || 'без комментария')}</div>` : ''}
+                    ${order.expired_at ? `⌛ Истёк: ${order.expired_at}<br>` : ''}
+                    ${order.canceled_at ? `❌ Отменён: ${order.canceled_at}<br>` : ''}
+
+                    <hr>
+
+                    ${order.items.map(item => `
+                        ${safeText(item.icon)} ${safeText(item.name)} x${item.quantity}
+                    `).join('<br>')}
+                </div>
+            `).join('')
+            : 'Заказов нет'
+        }
+    `)
+}
+
+function userHistoryBox(html){
+    document.getElementById('userHistory').innerHTML = html
+}
+
+async function addItem(){
+    const form = new FormData()
+
+    const itemName = document.getElementById('name')
+    const itemPrice = document.getElementById('price')
+    const itemIcon = document.getElementById('icon')
+    const itemDescription = document.getElementById('description')
+    const itemImage = document.getElementById('image')
+    const itemSpecial = document.getElementById('special')
+    const itemOldPrice = document.getElementById('oldPrice')
+    const itemDiscountPrice = document.getElementById('discountPrice')
+    const itemWriteoffEnabled = document.getElementById('writeoffEnabled')
+    const itemWriteoffHours = document.getElementById('writeoffHours')
+
+    if(!itemName.value.trim()){
+        alert('Введите название блюда')
+        return
+    }
+
+    form.append('name', itemName.value.trim())
+    form.append('price', itemPrice.value)
+        form.append('description', itemDescription.value)
+    if(itemImage.files[0]) form.append('image', itemImage.files[0])
+    form.append('is_special', itemSpecial.checked ? 1 : 0)
+    form.append('old_price', itemOldPrice.value)
+    form.append('discount_price', itemDiscountPrice.value)
+    form.append('writeoff_enabled', itemWriteoffEnabled.checked ? 1 : 0)
+    form.append('writeoff_hours', itemWriteoffHours.value)
+
+    branches.forEach(branch => {
+        const qtyInput = document.getElementById('q_' + branch.id)
+        form.append('quantity_' + branch.id, qtyInput ? qtyInput.value : 0)
+    })
+
+    const res = await fetch('/api/admin/menu', {
+        method:'POST',
+        body:form
+    })
+
+    const data = await res.json()
+
+    if(data.error){
+        alert(data.error)
+        return
+    }
+
+    itemName.value = ''
+    itemPrice.value = ''
+    itemDescription.value = ''
+    itemImage.value = ''
+    itemSpecial.checked = false
+    itemOldPrice.value = ''
+    itemDiscountPrice.value = ''
+    itemWriteoffEnabled.checked = false
+    itemWriteoffHours.value = ''
+
+    alert('Блюдо добавлено')
+
+    loadMenu()
+}
+
+
+function renderComboPicker(items){
+    if(typeof comboMenuPicker === 'undefined') return
+
+    comboMenuPicker.innerHTML = items
+        .filter(item => item.available)
+        .map(item => {
+            const photo = item.image
+                ? `<img src="/static/uploads/${item.image}" class="combo-pick-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+                : ''
+
+            const fallback = `<div class="combo-pick-fallback" style="${item.image ? 'display:none' : 'display:flex'}">Фото нет</div>`
+
+            return `
+                <div class="combo-pick" data-id="${item.id}" onclick="toggleComboPick(${item.id})">
+                    ${photo}
+                    ${fallback}
+                    <b>${safeText(item.name)}</b><br>
+                    <small>${item.price} ₽</small><br>
+                    <input
+                        id="combo_qty_${item.id}"
+                        type="number"
+                        min="1"
+                        value="1"
+                        onclick="event.stopPropagation()"
+                    >
+                </div>
+            `
+        }).join('')
+}
+
+function toggleComboPick(id){
+    const tile = document.querySelector(`.combo-pick[data-id="${id}"]`)
+    if(tile) tile.classList.toggle('active')
+}
+
+async function loadMenu(){
+    const res = await fetch('/api/admin/menu')
+
+    if(!res.ok) return
+
+    const data = await res.json()
+    window.adminMenuItems = data
+    renderComboPicker(data)
+
+    menuList.innerHTML = data.map(item => `
+        <div class="card ${item.available ? '' : 'hidden'}">
+            <b>${safeText(item.name)}</b>
+            ${item.is_special ? '🔥' : ''}<br>
+
+            ${safeText(item.description)}<br>
+
+            Цена: ${item.price} ₽
+            ${item.discount_price ? `/ скидка ${item.discount_price} ₽` : ''}
+            <br>
+            ${item.writeoff_enabled ? `🗑️ Автосписание: каждый день в 20:00` : 'Без автосписания'}
+
+            <hr>
+
+            ${item.stock.map(stock => `
+                <div>
+                    ${stock.name}:
+                    <input
+                        id="s_${item.id}_${stock.id}"
+                        type="number"
+                        value="${stock.quantity}"
+                    >
+                    <button onclick="setStock(${item.id}, ${stock.id})">OK</button>
+                </div>
+            `).join('')}
+
+            <br>
+
+            <div class="menu-actions">
+                <button class="edit" onclick='openEdit(${JSON.stringify(item)})'>
+                    Редактировать
+                </button>
+
+                <button class="blue" onclick="toggleWriteoff(${item.id}, ${item.writeoff_enabled ? 0 : 1})">
+                    ${item.writeoff_enabled ? 'Отключить автосписание' : 'Автосписание'}
+                </button>
+
+                <button class="danger" onclick="deleteItemForever(${item.id})">
+                    Удалить навсегда
+                </button>
+
+                ${
+                    item.available
+                    ? `<button class="danger" onclick="hideItem(${item.id})">Убрать</button>`
+                    : `<button class="blue" onclick="restoreItem(${item.id})">Вернуть</button>`
+                }
+            </div>
+        </div>
+    `).join('')
+}
+
+async function setStock(menuId, branchId){
+    await fetch('/api/admin/stock', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            menu_id: menuId,
+            branch_id: branchId,
+            quantity: document.getElementById(`s_${menuId}_${branchId}`).value
+        })
+    })
+}
+
+async function hideItem(id){
+    await fetch('/api/admin/menu/' + id + '/hide', {method:'POST'})
+    loadMenu()
+}
+
+async function restoreItem(id){
+    await fetch('/api/admin/menu/' + id + '/restore', {method:'POST'})
+    loadMenu()
+}
+
+async function deleteItemForever(id){
+    if(!confirm('Удалить позицию навсегда? Это действие нельзя откатить.')) return
+
+    const res = await fetch('/api/admin/menu/' + id + '/delete', {
+        method:'DELETE'
+    })
+
+    const data = await res.json()
+
+    if(data.error){
+        alert(data.error)
+        return
+    }
+
+    loadMenu()
+}
+
+async function toggleWriteoff(id, enabled){
+    const res = await fetch('/api/admin/menu/' + id + '/writeoff', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({enabled})
+    })
+
+    const data = await res.json()
+
+    if(data.error){
+        alert(data.error)
+        return
+    }
+
+    loadMenu()
+}
+
+function openEdit(item){
+    currentEditItem = item
+
+    editId.value = item.id
+    editName.value = item.name || ''
+    editPrice.value = item.price || 0
+    editDescription.value = item.description || ''
+    editAvailable.checked = item.available === 1
+    editSpecial.checked = item.is_special === 1
+    editOldPrice.value = item.old_price || 0
+    editDiscountPrice.value = item.discount_price || 0
+    editWriteoffEnabled.checked = item.writeoff_enabled === 1
+    editWriteoffHours.value = item.writeoff_hours || 0
+
+    editStock.innerHTML = item.stock.map(s => `
+        <label>${s.name}</label>
+        <input id="edit_stock_${s.id}" type="number" value="${s.quantity}">
+    `).join('')
+
+    editModal.style.display = 'flex'
+}
+
+function closeEdit(){
+    editModal.style.display = 'none'
+    currentEditItem = null
+}
+
+async function saveEdit(){
+    if(!currentEditItem) return
+
+    const stock = {}
+
+    currentEditItem.stock.forEach(s => {
+        stock[s.id] = document.getElementById('edit_stock_' + s.id).value
+    })
+
+    const res = await fetch('/api/admin/menu/' + editId.value, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            name:editName.value,
+            price:editPrice.value,
+            description:editDescription.value,
+            available:editAvailable.checked ? 1 : 0,
+            is_special:editSpecial.checked ? 1 : 0,
+            old_price:editOldPrice.value,
+            discount_price:editDiscountPrice.value,
+            writeoff_enabled:editWriteoffEnabled.checked ? 1 : 0,
+            writeoff_hours:editWriteoffHours.value,
+            stock
+        })
+    })
+
+    const data = await res.json()
+
+    if(data.error){
+        alert(data.error)
+        return
+    }
+
+    closeEdit()
+    loadMenu()
+}
+
+
+async function loadOperators(){
+    if(typeof operatorsList === 'undefined') return
+
+    if(!branches.length){
+        await loadBranches()
+    }
+
+    if(typeof operatorBranch !== 'undefined'){
+        operatorBranch.innerHTML = branches.map(branch => `
+            <option value="${branch.id}">${safeText(branch.name)}</option>
+        `).join('')
+    }
+
+    const res = await fetch('/api/admin/operators')
+
+    if(!res.ok){
+        operatorsList.innerHTML = '<div class="card">Не удалось загрузить операторов</div>'
+        return
+    }
+
+    const operators = await res.json()
+
+    if(operators.error){
+        operatorsList.innerHTML = `<div class="card">${safeText(operators.error)}</div>`
+        return
+    }
+
+    operatorsList.innerHTML = operators.map(operator => `
+        <div class="operator-card">
+            <div class="operator-row">
+                <div>
+                    <b>${safeText(operator.login)}</b><br>
+                    <small>${safeText(operator.branch_name || '')}</small>
+                </div>
+
+                <select id="op_branch_${operator.id}">
+                    ${branches.map(branch => `
+                        <option value="${branch.id}" ${Number(branch.id)===Number(operator.branch_id)?'selected':''}>
+                            ${safeText(branch.name)}
+                        </option>
+                    `).join('')}
+                </select>
+
+                <input id="op_password_${operator.id}" placeholder="Новый пароль">
+
+                <button onclick="saveOperator(${operator.id})">Сохранить</button>
+                <button class="danger" onclick="deleteOperator(${operator.id})">Удалить</button>
+            </div>
+        </div>
+    `).join('') || '<div class="card">Операторов пока нет</div>'
+}
+
+async function addOperator(){
+    const loginInput = document.getElementById('operatorLogin')
+    const passwordInput = document.getElementById('operatorPassword')
+    const branchSelect = document.getElementById('operatorBranch')
+
+    const login = loginInput.value.trim()
+    const password = passwordInput.value.trim()
+    const branchId = branchSelect.value
+
+    if(!login || !password){
+        alert('Введите логин и пароль оператора')
+        return
+    }
+
+    if(!branchId){
+        alert('Выберите буфет')
+        return
+    }
+
+    const res = await fetch('/api/admin/operators', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            login:login,
+            password:password,
+            branch_id:branchId
+        })
+    })
+
+    const data = await res.json()
+
+    if(data.error){
+        alert(data.error)
+        return
+    }
+
+    loginInput.value = ''
+    passwordInput.value = ''
+
+    alert('Оператор добавлен')
+    loadOperators()
+}
+
+async function saveOperator(id){
+    const password = document.getElementById('op_password_' + id).value.trim()
+    const branchId = document.getElementById('op_branch_' + id).value
+
+    const res = await fetch('/api/admin/operators/' + id, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            password:password,
+            branch_id:branchId
+        })
+    })
+
+    const data = await res.json()
+
+    if(data.error){
+        alert(data.error)
+        return
+    }
+
+    alert('Оператор сохранён')
+    loadOperators()
+}
+
+async function deleteOperator(id){
+    if(!confirm('Удалить оператора?')) return
+
+    const res = await fetch('/api/admin/operators/' + id, {
+        method:'DELETE'
+    })
+
+    const data = await res.json()
+
+    if(data.error){
+        alert(data.error)
+        return
+    }
+
+    loadOperators()
+}
+
+
+function renderPaymentProviderFields(){
+    const provider = payProvider.value || 'demo'
+    const realEnabled = payEnabled.checked
+    yookassaFields.style.display = provider === 'yookassa' ? 'block' : 'none'
+    sberFields.style.display = provider === 'sber' ? 'block' : 'none'
+
+    if(!realEnabled){
+        payHint.innerHTML = '🧪 Demo-режим: деньги не списываются, заказ можно пометить оплаченным тестовой страницей.'
+    }else if(provider === 'yookassa'){
+        payHint.innerHTML = 'ЮKassa: Shop ID + Secret Key. Для тестового магазина доступны тестовые сценарии; webhook укажите в личном кабинете ЮKassa.'
+    }else if(provider === 'sber'){
+        payHint.innerHTML = 'Сбер: используйте выданные банком API-реквизиты и URL шлюза.'
+    }
+}
+
+function collectPaymentSettings(){
+    return {
+        enabled: payEnabled.checked ? '1' : '0',
+        provider: payProvider.value || 'demo',
+        api_url: payApiUrl.value,
+        test_api_url: payTestApiUrl.value,
+        username: payUsername.value,
+        password: payPassword.value,
+        return_url: payReturnUrl.value,
+        fail_url: payFailUrl.value,
+        callback_url: payCallbackUrl.value,
+        demo_payment_url: payDemoUrl.value,
+        yookassa_api_url: payYooApiUrl.value || 'https://api.yookassa.ru/v3',
+        yookassa_shop_id: payYooShopId.value,
+        yookassa_secret_key: payYooSecret.value,
+        yookassa_payment_method: payYooMethod.value || 'auto',
+        yookassa_test_mode: payYooTestMode.checked ? '1' : '0',
+        payment_hold_minutes: String(Math.max(3, Math.min(60, Number(payHoldMinutes.value || 10)))),
+        fiscal_enabled: payFiscalEnabled.checked ? '1' : '0',
+        onec_enabled: payOnecEnabled.checked ? '1' : '0',
+        onec_url: payOnecUrl.value,
+        onec_token: payOnecToken.value
+    }
+}
+
+async function loadPaymentSettings(){
+    const res = await fetch('/api/admin/payment-settings')
+    if(!res.ok) return
+    const data = await res.json()
+
+    payEnabled.checked = String(data.enabled || '0') === '1'
+    payProvider.value = data.provider || 'demo'
+    payApiUrl.value = data.api_url || ''
+    payTestApiUrl.value = data.test_api_url || ''
+    payUsername.value = data.username || ''
+    payPassword.value = ''
+    payPassword.placeholder = data.password_saved ? 'Пароль сохранён. Оставьте пустым, чтобы не менять' : 'API пароль'
+    payReturnUrl.value = data.return_url || ''
+    payFailUrl.value = data.fail_url || ''
+    payCallbackUrl.value = data.callback_url || ''
+    payDemoUrl.value = data.demo_payment_url || ''
+    payYooApiUrl.value = data.yookassa_api_url || 'https://api.yookassa.ru/v3'
+    payYooShopId.value = data.yookassa_shop_id || ''
+    payYooSecret.value = ''
+    payYooSecret.placeholder = data.yookassa_secret_key_saved ? 'Secret Key сохранён. Оставьте пустым, чтобы не менять' : 'Secret Key'
+    payYooMethod.value = data.yookassa_payment_method || 'auto'
+    payYooTestMode.checked = String(data.yookassa_test_mode || '0') === '1'
+    payHoldMinutes.value = data.payment_hold_minutes || '10'
+    payFiscalEnabled.checked = String(data.fiscal_enabled || '0') === '1'
+    payOnecEnabled.checked = String(data.onec_enabled || '0') === '1'
+    payOnecUrl.value = data.onec_url || ''
+    payOnecToken.value = ''
+    payOnecToken.placeholder = data.onec_token_saved ? 'Токен сохранён. Оставьте пустым, чтобы не менять' : 'Токен 1С'
+    renderPaymentProviderFields()
+    loadPayments()
+}
+
+async function savePaymentSettings(){
+    const res = await fetch('/api/admin/payment-settings', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(collectPaymentSettings())
+    })
+    const data = await res.json()
+    if(data.error){ alert(data.error); return }
+    alert('Настройки оплаты сохранены')
+    loadPaymentSettings()
+}
+
+async function testPaymentSettings(){
+    payConnectionStatus.style.display = 'block'
+    payConnectionStatus.innerHTML = '⏳ Проверяем...'
+    const res = await fetch('/api/admin/payment-settings/test', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(collectPaymentSettings())
+    })
+    const data = await res.json()
+    if(!res.ok || data.error){
+        payConnectionStatus.innerHTML = '❌ ' + safeText(data.error || 'Ошибка подключения')
+        return
+    }
+    payConnectionStatus.innerHTML = '✅ ' + safeText(data.message || 'Подключение работает')
+}
+
+async function loadPayments(){
+    if(typeof paymentsLog === 'undefined') return
+
+    const res = await fetch('/api/admin/payments')
+
+    if(!res.ok) return
+
+    const data = await res.json()
+
+    paymentsLog.innerHTML = data.map(p => `
+        <div class="card">
+            <b>Платёж #${p.id}</b><br>
+            Заказ #${p.order_id}<br>
+            Провайдер: ${safeText(p.provider)}<br>
+            Статус: ${safeText(p.status)} / заказ: ${safeText(p.payment_status)}<br>
+            Сумма: ${p.amount} ₽<br>
+            Буфет: ${safeText(p.branch_name || '')}<br>
+            Телефон: ${safeText(p.phone || '')}<br>
+            ID банка: ${safeText(p.provider_order_id || '')}<br>
+            Создан: ${safeText(p.created_at || '')}<br>
+            ${p.paid_at ? `Оплачен: ${safeText(p.paid_at)}<br>` : ''}
+            ${p.refund_status ? `Возврат: ${safeText(p.refund_status)} ${safeText(p.refund_id || '')}<br>` : ''}
+            ${p.payment_url ? `<a href="${safeText(p.payment_url)}" target="_blank">Ссылка оплаты</a>` : ''}
+            ${p.status === 'paid' && p.payment_status === 'paid' && p.order_status === 'new' ? `<br><button style="background:#b91c1c;margin-top:8px" onclick="refundPayment(${p.order_id})">Вернуть оплату</button>` : ''}
+        </div>
+    `).join('') || '<div class="card">Платежей пока нет</div>'
+}
+
+async function refundPayment(orderId){
+    if(!confirm('Вернуть всю оплату по заказу #' + orderId + '? Заказ будет отменён.')) return
+    const res = await fetch('/api/admin/payments/' + orderId + '/refund', {method:'POST'})
+    const data = await res.json()
+    if(!res.ok || data.error){ alert(data.error || 'Не удалось выполнить возврат'); return }
+    alert('Возврат создан: ' + (data.status || 'ok'))
+    loadPayments()
+}
+
+async function loadLogs(){
+    const res = await fetch('/api/admin/logs')
+
+    if(!res.ok) return
+
+    const data = await res.json()
+
+    logs.innerHTML = data.map(log => `
+        <div class="card log">
+            ${safeText(log.created_at)}<br>
+            <b>${safeText(log.action)}</b><br>
+            Роль: ${safeText(log.actor_type)}
+            ${log.order_id ? `<br>Заказ #${log.order_id}` : ''}
+            ${log.details ? `<br>${safeText(log.details)}` : ''}
+        </div>
+    `).join('')
+}
+
+
+async function loadCombos(){
+    const res = await fetch('/api/admin/combos')
+    if(!res.ok) return
+    const data = await res.json()
+
+    comboList.innerHTML = data.map(combo => `
+        <div class="card ${combo.available ? '' : 'hidden'}">
+            <b>${safeText(combo.name)}</b><br>
+            ${safeText(combo.description || '')}<br>
+            Цена: ${combo.price} ₽<br>
+            <hr>
+            ${combo.items.map(item => `${safeText(item.name)} x${item.quantity}`).join('<br>')}
+            <br><br>
+            ${
+                combo.available
+                ? `<button class="danger" onclick="hideCombo(${combo.id})">Убрать</button>`
+                : `<button class="blue" onclick="restoreCombo(${combo.id})">Вернуть</button>`
+            }
+            <button class="danger" onclick="deleteComboForever(${combo.id})">Удалить навсегда</button>
+        </div>
+    `).join('')
+}
+
+async function addCombo(){
+    const selected = [...document.querySelectorAll('.combo-pick.active')].map(tile => {
+        const id = Number(tile.dataset.id)
+        return {
+            menu_id:id,
+            quantity:Number(document.getElementById('combo_qty_' + id).value || 1)
+        }
+    })
+
+    if(!selected.length){
+        alert('Выберите хотя бы одно блюдо для комбо')
+        return
+    }
+
+    const form = new FormData()
+    form.append('name', comboName.value)
+    form.append('price', comboPrice.value)
+        form.append('description', comboDescription.value)
+    form.append('image', comboImage.files[0])
+    form.append('items', JSON.stringify(selected))
+
+    const res = await fetch('/api/admin/combos', {
+        method:'POST',
+        body:form
+    })
+
+    const data = await res.json()
+
+    if(data.error){
+        alert(data.error)
+        return
+    }
+
+    comboName.value = ''
+    comboPrice.value = ''
+    comboDescription.value = ''
+    document.querySelectorAll('.combo-pick.active').forEach(x => x.classList.remove('active'))
+
+    loadCombos()
+}
+
+
+async function deleteComboForever(id){
+    if(!confirm('Удалить комбо навсегда? Это действие нельзя откатить.')) return
+
+    const res = await fetch('/api/admin/combos/' + id + '/delete', {
+        method:'DELETE'
+    })
+
+    const data = await res.json()
+
+    if(data.error){
+        alert(data.error)
+        return
+    }
+
+    loadCombos()
+}
+
+async function hideCombo(id){
+    await fetch('/api/admin/combos/' + id + '/hide', {method:'POST'})
+    loadCombos()
+}
+
+async function restoreCombo(id){
+    await fetch('/api/admin/combos/' + id + '/restore', {method:'POST'})
+    loadCombos()
+}
+
+const weekdays = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
+
+
+async function addBranch(){
+    const input = document.getElementById('newBranchName')
+    const name = (input.value || '').trim()
+    if(!name){ alert('Введите название буфета'); return }
+
+    const res = await fetch('/api/admin/branches', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name})
+    })
+    const data = await res.json()
+    if(!res.ok || data.error){ alert(data.error || 'Не удалось добавить буфет'); return }
+
+    input.value = ''
+    await loadBranches()
+    await loadSchedule()
+    alert('Буфет добавлен')
+}
+
+async function loadSchedule(){
+    const branchesRes = await fetch('/api/branches')
+    const branches = await branchesRes.json()
+
+    if(typeof operatorBranch !== 'undefined'){
+        operatorBranch.innerHTML = branches.map(branch => `
+            <option value="${branch.id}">${safeText(branch.name)}</option>
+        `).join('')
+    }
+
+    if(typeof branchCloseList !== 'undefined'){
+        branchCloseList.innerHTML = branches.map(branch => `
+            <div class="branch-close-card">
+                <div class="branch-close-row">
+                    <div>
+                        <b>${safeText(branch.name)}</b><br>
+                        <span class="${Number(branch.closed)===1?'branch-state-closed':'branch-state-open'}">
+                            ${Number(branch.closed)===1?'Закрыт':'Открыт'}
+                        </span>
+                    </div>
+                    <label>
+                        <input id="branch_closed_${branch.id}" type="checkbox" ${Number(branch.closed)===1?'checked':''}>
+                        Закрыть
+                    </label>
+                    <input id="branch_reason_${branch.id}" placeholder="Причина закрытия" value="${safeText(branch.closed_reason || '')}">
+                    <button onclick="saveBranchClosed(${branch.id})">Сохранить</button>
+                </div>
+            </div>
+        `).join('')
+    }
+
+    const res = await fetch('/api/admin/schedule')
+    if(!res.ok) return
+    const data = await res.json()
+
+    const grouped = {}
+
+    data.forEach(row => {
+        if(!grouped[row.branch_id]){
+            grouped[row.branch_id] = {
+                name:row.branch_name,
+                rows:[]
+            }
+        }
+
+        grouped[row.branch_id].rows.push(row)
+    })
+
+    scheduleList.innerHTML = `
+        <div class="schedule-grid">
+            ${Object.entries(grouped).map(([branchId, group]) => `
+                <div class="schedule-tile">
+                    <h3>${safeText(group.name)}</h3>
+                    ${group.rows.map(row => `
+                        <div class="schedule-row">
+                            <b>${weekdays[row.weekday]}</b>
+                            <input id="open_${row.branch_id}_${row.weekday}" type="time" value="${row.open_time}">
+                            <input id="close_${row.branch_id}_${row.weekday}" type="time" value="${row.close_time}">
+                            <input id="enabled_${row.branch_id}_${row.weekday}" type="checkbox" ${Number(row.enabled) === 1 ? 'checked' : ''}>
+                        </div>
+                    `).join('')}
+                    <button onclick="saveBranchSchedule(${branchId})">Сохранить расписание</button>
+                </div>
+            `).join('')}
+        </div>
+    `
+}
+
+async function saveBranchClosed(branchId){
+    const res = await fetch('/api/admin/branches/' + branchId + '/closed', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            closed:document.getElementById('branch_closed_' + branchId).checked,
+            reason:document.getElementById('branch_reason_' + branchId).value
+        })
+    })
+
+    const data = await res.json()
+
+    if(data.error){
+        alert(data.error)
+        return
+    }
+
+    alert('Статус буфета сохранён')
+    loadSchedule()
+}
+
+
+async function saveBranchSchedule(branchId){
+    const rows = [...document.querySelectorAll(`[id^="open_${branchId}_"]`)]
+
+    const schedules = rows.map(input => {
+        const weekday = Number(input.id.split('_').pop())
+
+        return {
+            branch_id:Number(branchId),
+            weekday:weekday,
+            open_time:document.getElementById(`open_${branchId}_${weekday}`).value,
+            close_time:document.getElementById(`close_${branchId}_${weekday}`).value,
+            enabled:document.getElementById(`enabled_${branchId}_${weekday}`).checked ? 1 : 0
+        }
+    })
+
+    const res = await fetch('/api/admin/schedule/bulk', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({schedules})
+    })
+
+    const data = await res.json()
+
+    if(data.error){
+        alert(data.error)
+        return
+    }
+
+    alert('Расписание сохранено')
+    loadSchedule()
+}
+
+
+async function saveSchedule(branchId, weekday, reload=true){
+    const res = await fetch('/api/admin/schedule', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            branch_id:branchId,
+            weekday:weekday,
+            open_time:document.getElementById(`open_${branchId}_${weekday}`).value,
+            close_time:document.getElementById(`close_${branchId}_${weekday}`).value,
+            enabled:document.getElementById(`enabled_${branchId}_${weekday}`).checked ? 1 : 0
+        })
+    })
+
+    const data = await res.json()
+
+    if(data.error){
+        alert(data.error)
+        return
+    }
+
+    if(reload) loadSchedule()
+}
+
+
+function analyticsBars(rows, labelKey, valueKey, suffix='', cls=''){
+    rows = Array.isArray(rows) ? rows : []
+    const max = Math.max(1, ...rows.map(r => Number(r[valueKey] || 0)))
+    return rows.length ? `<div class="bar-list">${rows.map(r => `
+        <div class="bar-row">
+            <div>${safeText(r[labelKey] || '—')}</div>
+            <div class="bar-track"><div class="bar-fill ${cls}" style="width:${Math.max(2, Number(r[valueKey] || 0) / max * 100)}%"></div></div>
+            <b>${Number(r[valueKey] || 0).toLocaleString('ru-RU')}${suffix}</b>
+        </div>`).join('')}</div>` : '<div class="muted">Пока нет данных</div>'
+}
+
+async function trendText(value){
+    if(value === null || value === undefined) return 'нет базы сравнения'
+    const n=Number(value)
+    if(!Number.isFinite(n)) return '—'
+    if(n>0) return `▲ ${n.toFixed(1)}%`
+    if(n<0) return `▼ ${Math.abs(n).toFixed(1)}%`
+    return '0%'
+}
+
+function hourLabel(hour){
+    const h=Number(hour||0)
+    return String(h).padStart(2,'0') + ':00'
+}
+
+async function loadControlCenter(){
+    const [healthRes, incidentsRes, auditRes] = await Promise.all([
+        fetch('/api/admin/health'),
+        fetch('/api/admin/incidents'),
+        fetch('/api/admin/audit?limit=80')
+    ])
+
+    if(!healthRes.ok){
+        healthCards.innerHTML='<div class="card">Не удалось получить состояние системы</div>'
+        return
+    }
+
+    const h=await healthRes.json()
+    const incidents=incidentsRes.ok ? await incidentsRes.json() : []
+    const audit=auditRes.ok ? await auditRes.json() : []
+
+    const backupGood=h.backup && h.backup.exists && Number(h.backup.age_minutes||99999)<1440
+    const paymentGood=!h.payment_enabled || h.payment_configured
+    healthCards.innerHTML=`
+        <div class="health-card">База данных<b class="${h.db_ok?'health-good':'health-bad'}">${h.db_ok?'Работает':'Ошибка'}</b></div>
+        <div class="health-card">Платежи<b class="${paymentGood?'health-good':'health-bad'}">${h.payment_enabled?safeText(h.payment_provider):'Demo / выключены'}</b></div>
+        <div class="health-card">Pending оплаты<b class="${Number(h.payments_pending||0)>0?'health-warn':'health-good'}">${Number(h.payments_pending||0)}</b></div>
+        <div class="health-card">Нужен возврат<b class="${Number(h.refund_required||0)>0?'health-bad':'health-good'}">${Number(h.refund_required||0)}</b></div>
+        <div class="health-card">Инциденты<b class="${Number(h.incidents_open||0)>0?'health-warn':'health-good'}">${Number(h.incidents_open||0)}</b></div>
+        <div class="health-card">Backup<b class="${backupGood?'health-good':'health-warn'}">${backupGood?'Свежий':(h.backup&&h.backup.exists?'Устарел':'Нет')}</b><div class="metric-note">${h.backup&&h.backup.latest?safeText(h.backup.latest):''}</div></div>
+        <div class="health-card">Свободно на диске<b class="${Number(h.disk_free_mb||0)<1024?'health-warn':'health-good'}">${Number(h.disk_free_mb||0).toLocaleString('ru-RU')} МБ</b></div>
+        <div class="health-card">Активные заказы<b>${Number(h.orders_active||0)}</b></div>
+    `
+
+    incidentsList.innerHTML=incidents.length ? incidents.map(x=>`
+        <div class="card incident-card ${x.severity==='critical'?'critical':''}">
+            <b>${x.severity==='critical'?'🔴':'🟠'} ${safeText(x.message)}</b>
+            <div>${safeText(x.details||'')}</div>
+            <div class="incident-meta">${safeText(x.category)} · ${safeText(x.updated_at||x.created_at||'')}${x.order_id?' · заказ #'+x.order_id:''}</div>
+            <button onclick="resolveIncident(${x.id})" style="margin-top:8px;background:#334155">Отметить решённым</button>
+        </div>
+    `).join('') : '<div class="card health-good">Критичных инцидентов нет</div>'
+
+    auditList.innerHTML=audit.slice(0,30).map(x=>`
+        <div class="feedback-row">
+            <b>${safeText(x.action)}</b>
+            <div>${safeText(x.details||'')}</div>
+            <small class="muted">${safeText(x.actor_type)}${x.actor_id?' #'+x.actor_id:''} · ${safeText(x.created_at||'')}</small>
+        </div>
+    `).join('') || '<div class="muted">Журнал пуст</div>'
+}
+
+async function resolveIncident(id){
+    const res=await fetch('/api/admin/incidents/'+id+'/resolve',{method:'POST'})
+    if(!res.ok){ alert('Не удалось закрыть инцидент'); return }
+    loadControlCenter()
+}
+
+async function loadDashboard(){
+    const res = await fetch('/api/admin/analytics')
+    if(!res.ok) return
+    const data = await res.json()
+    const s = data.summary || {}
+    const rs = data.rating_summary || {}
+    const cmp = data.comparison || {}
+    const service = data.service || {}
+
+    dashboardCards.innerHTML = `
+        <div class="kpi-card">Выручка<b>${Number(s.revenue_total || 0).toLocaleString('ru-RU')} ₽</b><div class="metric-note">Сегодня: ${Number((cmp.today||{}).revenue||0).toLocaleString('ru-RU')} ₽ · ${trendText(cmp.today_revenue_change_pct)}</div></div>
+        <div class="kpi-card">Выдано<b>${Number(s.orders_total || 0)}</b><div class="metric-note">Сегодня ${Number((cmp.today||{}).orders_count||0)} · ${trendText(cmp.today_orders_change_pct)}</div></div>
+        <div class="kpi-card">Средний чек<b>${Number(s.avg_check || 0).toFixed(0)} ₽</b><div class="metric-note">за весь период</div></div>
+        <div class="kpi-card">Онлайн оплачено<b>${Number(s.paid_orders || 0)}</b><div class="metric-note">${Number(s.online_payment_share || 0).toFixed(1)}% от выданных</div></div>
+        <div class="kpi-card">Готовим в среднем<b>${Number(service.avg_prepare_minutes || 0).toFixed(1)} мин</b><div class="metric-note">последние 30 дней</div></div>
+        <div class="kpi-card">Средняя оценка<b>${Number(rs.avg_rating || 0).toFixed(2)} ★</b><div class="metric-note">${Number(rs.feedback_count || 0)} отзывов</div></div>
+    `
+    dashboardDetails.innerHTML = `
+        <div class="analytics-grid">
+            <div class="card"><h3>🏪 Выручка по буфетам</h3>${analyticsBars(data.by_branch,'name','revenue',' ₽')}</div>
+            <div class="card"><h3>🍔 Что покупают</h3>${analyticsBars((data.popular_items||[]).slice(0,8),'name','quantity',' шт.','blue')}</div>
+            <div class="card"><h3>⏰ Пики заказов</h3>${analyticsBars((data.hourly||[]).map(x=>({label:hourLabel(x.hour),value:x.orders_count})),'label','value',' заказов','orange')}</div>
+            <div class="card"><h3>⚠️ Низкие остатки</h3>${(data.stock_risks||[]).slice(0,8).map(x=>`<div class="feedback-row"><b>${safeText(x.name)}</b><div>${safeText(x.branch_name)} · ${Number(x.quantity||0)} шт.</div></div>`).join('') || '<div class="muted">Критичных остатков нет</div>'}</div>
+        </div>`
+}
+
+async function loadAnalytics(){
+    const res = await fetch('/api/admin/analytics')
+    if(!res.ok){ analytics.innerHTML='<div class="card">Не удалось загрузить аналитику</div>'; return }
+    const data = await res.json()
+    const s = data.summary || {}
+    const rs = data.rating_summary || {}
+    const cmp = data.comparison || {}
+    const service = data.service || {}
+    const dist = Object.fromEntries((data.rating_distribution || []).map(x => [Number(x.stars), Number(x.count)]))
+
+    analytics.innerHTML = `
+        <div class="kpi-grid">
+            <div class="kpi-card">Сегодня<b>${Number((cmp.today||{}).revenue||0).toLocaleString('ru-RU')} ₽</b><div class="metric-note">к вчера: ${trendText(cmp.today_revenue_change_pct)}</div></div>
+            <div class="kpi-card">7 дней<b>${Number((cmp.last7||{}).revenue||0).toLocaleString('ru-RU')} ₽</b><div class="metric-note">к предыдущим 7 дням: ${trendText(cmp.week_revenue_change_pct)}</div></div>
+            <div class="kpi-card">Средний чек<b>${Number(s.avg_check || 0).toFixed(0)} ₽</b></div>
+            <div class="kpi-card">Отмены / просрочка<b>${Number(s.cancel_rate||0).toFixed(1)}% / ${Number(s.expiry_rate||0).toFixed(1)}%</b></div>
+            <div class="kpi-card">Онлайн-оплата<b>${Number(s.online_payment_share||0).toFixed(1)}%</b><div class="metric-note">${Number(s.online_revenue || 0).toLocaleString('ru-RU')} ₽</div></div>
+            <div class="kpi-card">Отзывы<b>${Number(rs.avg_rating || 0).toFixed(2)} ★</b><div class="metric-note">${Number(rs.feedback_count || 0)} оценок, ${Number(rs.comments_count || 0)} комментариев</div></div>
+        </div>
+
+        <div class="analytics-grid">
+            <div class="card"><h3>⏱️ Скорость обслуживания</h3>
+                <div class="feedback-row">До принятия оператором <b>${Number(service.avg_accept_minutes||0).toFixed(1)} мин</b></div>
+                <div class="feedback-row">Приготовление <b>${Number(service.avg_prepare_minutes||0).toFixed(1)} мин</b></div>
+                <div class="feedback-row">От готовности до выдачи <b>${Number(service.avg_pickup_minutes||0).toFixed(1)} мин</b></div>
+            </div>
+            <div class="card"><h3>⏰ Пики заказов за 30 дней</h3>${analyticsBars((data.hourly||[]).map(x=>({label:hourLabel(x.hour),value:x.orders_count})),'label','value',' заказов','orange')}</div>
+            <div class="card"><h3>📅 Последние дни</h3>${analyticsBars(data.daily,'day','revenue',' ₽')}</div>
+            <div class="card"><h3>🏪 Буфеты</h3>${analyticsBars(data.by_branch,'name','revenue',' ₽')}</div>
+            <div class="card"><h3>🍔 Топ позиций</h3>${analyticsBars((data.popular_items||[]).slice(0,10),'name','quantity',' шт.','blue')}</div>
+            <div class="card"><h3>💳 Статусы оплаты</h3>${analyticsBars(data.payment_statuses,'status','count','','orange')}</div>
+            <div class="card">
+                <h3>⭐ Распределение оценок</h3>
+                ${[5,4,3,2,1].map(star => `<div class="bar-row"><div>${star} ★</div><div class="bar-track"><div class="bar-fill orange" style="width:${Math.max(0,(dist[star]||0)/Math.max(1,Number(rs.feedback_count||0))*100)}%"></div></div><b>${dist[star]||0}</b></div>`).join('')}
+            </div>
+            <div class="card">
+                <h3>💬 Последние комментарии</h3>
+                ${(data.recent_feedback||[]).length ? data.recent_feedback.map(f => `<div class="feedback-row"><div class="stars">${'★'.repeat(Number(f.stars||0))}${'☆'.repeat(Math.max(0,5-Number(f.stars||0)))}</div><b>Заказ #${f.order_id} · ${safeText(f.branch_name)}</b><div>${safeText(f.comment)}</div><small class="muted">${safeText(f.items || '')} · ${safeText(f.created_at || '')}</small></div>`).join('') : '<div class="muted">Комментариев пока нет</div>'}
+            </div>
+            <div class="card"><h3>⚠️ Низкие остатки ≤ 3</h3>${(data.stock_risks||[]).map(x=>`<div class="feedback-row"><b>${safeText(x.name)}</b><div>${safeText(x.branch_name)} · ${Number(x.quantity||0)} шт.</div></div>`).join('') || '<div class="muted">Нет</div>'}</div>
+            <div class="card"><h3>📉 Блюда с низкой оценкой</h3>${(data.low_rated||[]).map(x=>`<div class="feedback-row"><b>${safeText(x.name)}</b><div>${Number(x.avg_stars||0).toFixed(2)} ★ · ${Number(x.rating_count||0)} оценок</div></div>`).join('') || '<div class="muted">Пока недостаточно оценок</div>'}</div>
+        </div>
+
+        <div class="card" style="margin-top:16px"><h3>⭐ Рейтинг блюд</h3>${data.ratings && data.ratings.length ? `<table class="stat-table"><tr><th>Блюдо</th><th>Оценок</th><th>Средняя</th></tr>${data.ratings.map(r => `<tr><td>${safeText(r.name)}</td><td>${r.rating_count}</td><td>${r.avg_stars} ★</td></tr>`).join('')}</table>` : 'Пока нет оценок'}</div>
+        <div class="card"><h3>🗑️ Списания</h3>${data.writeoffs && data.writeoffs.length ? `<table class="stat-table"><tr><th>Блюдо</th><th>Буфет</th><th>Списано</th></tr>${data.writeoffs.map(w => `<tr><td>${safeText(w.name)}</td><td>${safeText(w.branch_name)}</td><td>${w.quantity}</td></tr>`).join('')}</table>` : 'Списаний пока нет'}</div>
+    `
+}
+
+setInterval(() => {
+    if(adminPanel.style.display !== 'none') {
+        loadOrders()
+    }
+}, 30000)
+
+loadBranches()
+</script>
+</body>
+</html>
